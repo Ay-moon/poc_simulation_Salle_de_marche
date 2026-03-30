@@ -3,44 +3,40 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.env
+*.egg-info/
+
+# Virtual environments
+.env/
+.venv/
 env/
 venv/
-*.egg-info/
 
 # Jupyter
 .ipynb_checkpoints/
 
-# Data files
-*.xlsx
-*.xlsm
-*.accdb
-*.csv
-*.json
-
 # Logs
 *.log
 
-# VSCode
+# IDE
 .vscode/
+.idea/
 
-# Mac/Windows
+# OS
 .DS_Store
 Thumbs.db
 
-# Untracked testing artifacts
+# Temp
 *.tmp
-
-# Build artifacts
-dist/
-build/
-
-# Python virtual environments
-.env/
-.venv/
-
-# Worker files
 tmp/
 
-# ignore generated docs if any
+# Build
+dist/
+build/
 docs/_build/
+
+# Data files — ignore raw/sensitive data
+# BUT track sample files (prefixed sample_)
+*.accdb
+
+# Excel binaries — tracked explicitly where needed
+# (CommandoQuant.xlsm and var_results.xlsx are tracked via git add -f if needed)
