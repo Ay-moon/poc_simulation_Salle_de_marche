@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CommandoQuant — Quant Equity Risk Developer · Multi-Stack</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">
+    <span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<!-- ═══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">⚡ Excel VBA · VB.net · C# · Access · SQL · Python · Equity Derivatives</div>
+    <h1><span>CommandoQuant</span><br/>Quant Equity Risk Developer</h1>
+    <p>
+      Commando développeur quant spécialisé <strong>Equity Risque de Marché</strong> —
+      pricing d'options, calcul des Greeks, VaR et stress tests sur produits dérivés actions.
+      Stack complet : Excel VBA pour le front, C#/VB.net pour le moteur de pricing,
+      SQL/Access pour les données, Python pour l'analytique avancée.
+    </p>
+    <div class="hero-cta">
+      <a href="architecture.html" class="btn btn-primary">🏗️ Architecture Multi-Stack</a>
+      <a href="features.html" class="btn btn-outline">⚡ Features Quant E2E</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-chip"><span class="num">6</span><span class="lbl">Langages / Techs</span></div>
+      <div class="stat-chip"><span class="num">5+</span><span class="lbl">Types d'options</span></div>
+      <div class="stat-chip"><span class="num">5</span><span class="lbl">Greeks calculés</span></div>
+      <div class="stat-chip"><span class="num">3</span><span class="lbl">Méthodes VaR</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 1 — POSITIONNEMENT MARCHÉ ═══════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Marché</span>
+      <h2>Inspiré des systèmes quant professionnels</h2>
+      <p>Les banques de financement et d'investissement (BNP Paribas CIB, Société Générale, Natixis, Crédit Agricole CIB) s'appuient sur des plateformes industrielles pour gérer le risque de marché sur actions. CommandoQuant en capture l'essence dans un stack accessible.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">🔷</div>
+        <h3>Murex MX.3</h3>
+        <p>Référence mondiale pour les dérivés actions. Pricing multi-modèles (Black-Scholes, Dupire Local Vol, Heston stochastique), gestion des Greeks en temps réel, P&amp;L attribution, VaR. CommandoQuant en reprend l'architecture en couches et les concepts : deal ticket, blotter, risk engine, reporting.</p>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">📊</div>
+        <h3>Bloomberg MARS</h3>
+        <p>Market Assisted Risk System de Bloomberg. Calcul de VaR paramétrique et historique, stress tests réglementaires (FRTB), surface de volatilité implicite. CommandoQuant s'inspire de ses workflows de calcul quotidien et de ses rapports réglementaires (EMIR, MiFID II).</p>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">⚙️</div>
+        <h3>SunGard Adaptiv / MarkIT</h3>
+        <p>Plateformes de risk management pour dérivés OTC. Gestion du cycle de vie des options, calcul des sensibilités, CVA/DVA. CommandoQuant reprend le <strong>pipeline de valorisation</strong> : market data feed → pricing engine → Greeks → VaR → rapport de risque.</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:2rem">
+      <strong>Ce que CommandoQuant apporte :</strong> 100% open stack (Excel VBA + .NET + Python), zéro licence, déployable immédiatement, tout le code readable et évolutif. Idéal pour une mission commando : livrer un moteur de pricing opérationnel là où les systèmes industriels sont trop lourds ou indisponibles.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — STACK COMPÉTENCES ═══════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">Stack</span>
+      <h2>Compétences techniques — 6 technologies</h2>
+      <p>Chaque technologie joue un rôle précis dans la chaîne de valeur quant.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">📗</div>
+        <h3>Excel VBA</h3>
+        <p>Front-end du blotter, deal ticket options, dashboard Greeks en temps réel, génération de rapports. OOP via Class Modules, Dictionary, ListObjects. Le "cockpit" de l'outil vu par le trader et le risk manager.</p>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">🔵</div>
+        <h3>VB.net</h3>
+        <p>Bibliothèque de pricing interopérable avec Excel via COM Interop. Interface naturelle pour les quants issus du monde VBA. Implémentation Black-Scholes, arbres binomiaux, gestion des surfaces de volatilité.</p>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">🔷</div>
+        <h3>C#</h3>
+        <p>Moteur de pricing haute performance. Calcul des Greeks (Delta, Gamma, Vega, Theta, Rho), Monte Carlo parallélisé (Parallel.For), API REST pour exposer les services de pricing. QuantLib.NET ou implémentation custom.</p>
+      </div>
+      <div class="card fade-up delay-1">
+        <div class="card-icon">🗄️</div>
+        <h3>Access + SQL</h3>
+        <p>Persistance des positions, historique des valorisations, tables de référence (underlyings, vol surface). Access pour les environnements standalone, SQL Server pour la production. ADO.NET pour l'accès depuis .NET.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">🐍</div>
+        <h3>Python</h3>
+        <p>Analytics avancés : Monte Carlo VaR (NumPy/SciPy), backtesting des modèles, calibration des surfaces de vol (scipy.optimize), stress testing FRTB. Pandas pour l'analyse de séries temporelles historiques. Interop via xlwings ou API.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">📐</div>
+        <h3>Modèles Quant</h3>
+        <p>Black-Scholes (closed-form), Arbres binomiaux (options américaines), Monte Carlo (path-dependent), Dupire Local Vol. Greeks analytiques et par différences finies. Calibration sur données de marché réelles.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — USE CASE CENTRAL ════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Use Case</span>
+      <h2>Pipeline complet en 5 minutes</h2>
+      <p>De la saisie d'une option au rapport de risque consolidé.</p>
+    </div>
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Séquence complète — Option sur action CAC 40</strong><br/>
+          Le quant dev saisit une option Call sur TotalEnergies, l'outil calcule le prix Black-Scholes, les Greeks, agrège la position au book, calcule la VaR et génère le rapport de risque. Tout se passe dans le même pipeline sans intervention manuelle.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+sequenceDiagram
+  participant T as 🧑 Trader / Quant
+  participant VBA as 📊 Excel VBA
+  participant CS as ⚙️ C# PricingEngine
+  participant DB as 🗄️ SQL/Access
+  participant PY as 🐍 Python Analytics
+
+  T->>VBA: Saisit Option Call TTE · Strike 60 · Maturité 3M · Vol 28%
+  VBA->>CS: PricingEngine.Price(option)
+  CS->>CS: BlackScholes.Calc() → Prix = 2.45€
+  CS->>CS: Greeks.Calc() → Δ=0.52 Γ=0.08 ν=0.18 θ=-0.02
+  CS->>VBA: Retourne Prix + Greeks
+  VBA->>DB: Sauvegarde Position + Greeks (tbl_Positions)
+  VBA->>VBA: Rafraîchit Blotter + Dashboard Greeks
+  T->>VBA: Lance calcul VaR journalier
+  VBA->>PY: VaRCalculator.run(book, confidence=0.99)
+  PY->>DB: Lit 250j historique cours + vol
+  PY->>PY: Monte Carlo 10 000 scénarios
+  PY->>VBA: VaR 1j 99% = 125 000€
+  VBA->>T: Rapport de risque complet généré
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — NAVIGATION ═══════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Navigation</span>
+      <h2>Plan du site</h2>
+      <p>8 sections pour comprendre le domaine options, l'architecture multi-stack et l'implémentation.</p>
+    </div>
+    <div class="grid grid-3">
+
+      <a href="business.html" style="text-decoration:none">
+        <div class="card amber fade-up delay-1">
+          <div class="card-icon">📈</div>
+          <h3>Business</h3>
+          <p>Produits dérivés actions : options vanille, barrières, asiatiques, variance swaps. Pricing Black-Scholes. Greeks (Δ Γ ν θ ρ). Risque de marché : VaR, sensibilités, P&amp;L.</p>
+        </div>
+      </a>
+
+      <a href="workflow.html" style="text-decoration:none">
+        <div class="card amber fade-up delay-2">
+          <div class="card-icon">🔄</div>
+          <h3>Workflow &amp; États</h3>
+          <p>Cycle de vie d'une position options : Capture → Validé → Pricé → Hedgé → Bouclé. Pipeline de calcul de risque quotidien, stress tests, alertes limites.</p>
+        </div>
+      </a>
+
+      <a href="architecture.html" style="text-decoration:none">
+        <div class="card amber fade-up delay-3">
+          <div class="card-icon">🏗️</div>
+          <h3>Architecture Multi-Stack</h3>
+          <p>4 couches : Excel VBA (UI), Classes domaine (C#/VB.net), Pricing Engine (.NET), Data (SQL/Access) + Python analytics. Patterns Repository, Strategy, Factory.</p>
+        </div>
+      </a>
+
+      <a href="datamodel.html" style="text-decoration:none">
+        <div class="card fade-up delay-1">
+          <div class="card-icon">🗄️</div>
+          <h3>Data Model</h3>
+          <p>Tables : tbl_Positions, tbl_Options, tbl_Greeks, tbl_VaR, tbl_StressTest, tbl_MarketData. Schéma SQL complet, relations, mapping domain ↔ persistance.</p>
+        </div>
+      </a>
+
+      <a href="implementation.html" style="text-decoration:none">
+        <div class="card fade-up delay-2">
+          <div class="card-icon">💻</div>
+          <h3>Implémentation</h3>
+          <p>Code multi-langage : VBA (COption, CGreeks), C# (BlackScholesEngine), VB.net (PricingService), Python (MonteCarloVaR). Patterns OOP cross-langages.</p>
+        </div>
+      </a>
+
+      <a href="features.html" style="text-decoration:none">
+        <div class="card fade-up delay-3">
+          <div class="card-icon">⚡</div>
+          <h3>Features E2E</h3>
+          <p>5 features de bout en bout : Option Capture + Pricing BS, Greeks temps réel, P&amp;L Attribution, VaR (3 méthodes), Stress Testing réglementaire.</p>
+        </div>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 5 — PERSONAS ═════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag teal">Utilisateurs</span>
+      <h2>Qui utilise CommandoQuant ?</h2>
+    </div>
+    <div class="grid grid-4">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">⚗️</div>
+        <h3>Quant Developer</h3>
+        <p>Implémente les modèles de pricing, calibre les surfaces de vol, valide les Greeks. Utilise le pipeline C#/Python pour les calculs intensifs.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">📉</div>
+        <h3>Risk Manager</h3>
+        <p>Suivi VaR quotidienne, limites Greeks par book, stress tests réglementaires (FRTB, EMIR), validation des modèles, reporting Comité de risque.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🧑‍💼</div>
+        <h3>Trader Options</h3>
+        <p>Saisie des trades, visualisation du book (Blotter), Delta hedging, suivi du P&amp;L live, ajustement des positions selon les Greeks.</p>
+      </div>
+      <div class="card fade-up delay-4">
+        <div class="card-icon">⚙️</div>
+        <h3>Middle Office</h3>
+        <p>Confirmation des transactions, réconciliation P&amp;L théorique vs réel, contrôle des données de marché (spot, vol, taux), reporting back-office.</p>
+      </div>
+    </div>
+    <div class="callout blue" style="margin-top:2rem">
+      <strong>Contexte mission commando :</strong> Ce profil intervient en mode commando pour livrer rapidement un outil opérationnel là où les systèmes industriels (Murex, Kondor+) sont absent ou trop lents à déployer. Stack 100% Microsoft + Python, zéro dépendance externe, déployable en quelques jours.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 6 — SCOPE ════════════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Scope</span>
+      <h2>Scope &amp; Non-scope</h2>
+    </div>
+    <div class="grid grid-2">
+      <div class="card green fade-up delay-1">
+        <div class="card-icon">✅</div>
+        <h3>In scope — V1</h3>
+        <ul style="font-size:0.87rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>Options vanille européennes Call/Put (Black-Scholes)</li>
+          <li>Options américaines (arbre binomial CRR)</li>
+          <li>Greeks : Delta, Gamma, Vega, Theta, Rho</li>
+          <li>VaR paramétrique (variance-covariance)</li>
+          <li>VaR historique (250 jours)</li>
+          <li>Monte Carlo VaR (Python, 10 000 scénarios)</li>
+          <li>Stress testing : scénarios macro (choc vol +30%, choc spot -20%)</li>
+          <li>P&amp;L quotidien théorique + attribution Greeks</li>
+          <li>Blotter positions + dashboard Greeks live (Excel VBA)</li>
+          <li>Export rapports risque (PDF/CSV)</li>
+        </ul>
+      </div>
+      <div class="card red fade-up delay-2">
+        <div class="card-icon">❌</div>
+        <h3>Non-scope — V1</h3>
+        <ul style="font-size:0.87rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>Options exotiques complexes (himalaya, rainbow multi-asset)</li>
+          <li>Modèle stochastique Heston (V2)</li>
+          <li>CVA/DVA (risque de contrepartie)</li>
+          <li>Connexion temps réel Bloomberg / Reuters (API)</li>
+          <li>XVA complet (FVA, MVA, KVA)</li>
+          <li>Reporting réglementaire automatisé FRTB IMA</li>
+          <li>Interface FIX / SWIFT ordres</li>
+          <li>Clearing CCP automatique</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant — Quant Equity Risk Developer · Excel VBA · VB.net · C# · SQL · Python · Produits Dérivés Actions</p>
+  <p style="margin-top:0.5rem">
+    <a href="architecture.html">Architecture</a> ·
+    <a href="implementation.html">Implémentation</a> ·
+    <a href="features.html">Features</a> ·
+    <a href="runbook.html">Runbook</a>
+  </p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose', themeVariables: { textColor: '#000000', labelTextColor: '#000000', noteBkgColor: '#fff5ad', noteTextColor: '#000000', activationBorderColor: '#000000', activationBkgColor: '#f4f4f4', actorTextColor: '#000000', actorLineColor: '#333333', signalColor: '#000000', signalTextColor: '#000000' } });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

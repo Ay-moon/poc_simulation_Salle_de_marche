@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Architecture — CommandoQuant Multi-Stack</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html" class="active">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🏗️ Architecture Multi-Stack — 4 Couches</h1>
+  <p>VBA (UI) · C#/VB.net (Pricing Engine) · <strong>SQL Server PERSO-AJE-DELL\BFASERVER01</strong> (Data) · Python (Analytics)</p>
+  <p style="font-size:0.88rem;color:#F0B429;margin-top:0.4rem">⚠️ Access décommissionné — CAccessRepository supprimé — SQL Server est l'unique couche données</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Architecture</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 1 — VUE GLOBALE ══════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Vue globale</span>
+      <h2>Architecture en 4 couches multi-langages</h2>
+      <p>Principe : chaque technologie fait ce qu'elle fait le mieux. VBA pour la proximité Excel/trader, .NET pour les calculs intensifs, Python pour l'analytique, SQL pour la persistance.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Pourquoi ce découpage multi-langages ?</strong><br/>
+          Un quant dev en banque travaille rarement avec un seul langage. VBA reste incontournable pour Excel. C# et VB.net dominent le pricing .NET en salle de marché. Python est le standard pour l'analytique quantitative. SQL Server est l'unique source de données — robuste, transactionnel, multi-utilisateurs.<br/><br/>
+          <strong style="color:#F0B429">🎓 Junior, écoute bien :</strong> Imagine que chaque langage est un spécialiste. VBA, c'est le commercial qui parle à Excel (les traders adorent Excel). C#, c'est l'ingénieur qui fait les calculs compliqués (Black-Scholes, c'est des maths). Python, c'est le statisticien qui fait les simulations (la VaR). SQL Server, c'est l'archiviste qui garde tout en sécurité. Chacun fait ce qu'il fait le mieux. Voilà pourquoi on a 4 langages différents !
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+flowchart TB
+  subgraph UI["Layer 1 — UI · Excel VBA"]
+    direction LR
+    SH1["📋 Blotter\n(positions live)"]
+    SH2["🎫 Deal Ticket\n(saisie option)"]
+    SH3["📊 Greeks Dashboard\n(Δ Γ ν θ par book)"]
+    SH4["📈 VaR Report\n(résultats risque)"]
+    SH5["📜 AuditLog\n(immuable)"]
+  end
+
+  subgraph DOM["Layer 2 — Domain · Classes métier"]
+    direction LR
+    COP["COption\n(VBA/C#)"]
+    CPOS["CPosition\n(VBA/C#)"]
+    CGR["CGreeks\n(C#)"]
+    CHG["CHedge\n(VBA)"]
+    CMD["CMarketData\n(VBA/C#)"]
+  end
+
+  subgraph ENG["Layer 3 — Pricing Engine · C# / VB.net"]
+    direction LR
+    BS["BlackScholesEngine\n(C#)"]
+    BIN["BinomialTree\n(C#)"]
+    MC["MonteCarloEngine\n(C#/Python)"]
+    VS["VolSurface\n(VB.net)"]
+    VAR["VaRCalculator\n(Python)"]
+  end
+
+  subgraph DAT["Layer 4 — Data · SQL Server PERSO-AJE-DELL\\BFASERVER01"]
+    direction LR
+    REPO["IPositionRepository\n(interface C#)"]
+    SQLREPO["CSqlPositionRepository\n(SQL Server — UNIQUE)"]
+    DB[("CommandoQuant\ntbl_Positions\ntbl_Greeks\ntbl_VaR")]
+    REPO -.->|implémenté par| SQLREPO
+    SQLREPO -->|ADO.NET SqlClient| DB
+  end
+
+  subgraph INF["Cross-cutting — Infrastructure"]
+    direction LR
+    LOG["CLogger"]
+    CFG["CConfig"]
+    PRF["CPerf"]
+    APP["CApp\n(Composition Root)"]
+  end
+
+  UI -->|appelle via COM| ENG
+  ENG -->|manipule| DOM
+  ENG -->|persiste via| DAT
+  INF -->|injecté dans| ENG
+  APP -->|orchestre| INF
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — INTEROPÉRABILITÉ ════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">Interop</span>
+      <h2>Interopérabilité VBA ↔ .NET ↔ Python</h2>
+      <p>Le vrai challenge technique : faire parler les langages entre eux de façon fiable et performante.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">🔌</div>
+        <h3>VBA ↔ C# (COM Interop)</h3>
+        <p>La DLL C# est enregistrée comme serveur COM. VBA y accède via <code>CreateObject("CommandoQuant.PricingEngine")</code>. La DLL expose des interfaces simples (primitives + arrays). Le marshaling COM gère la conversion des types.</p>
+        <div class="callout" style="margin-top:0.8rem;font-size:0.82rem">
+          <code>[ComVisible(true)]</code><br/>
+          <code>[ClassInterface(ClassInterfaceType.None)]</code><br/>
+          <code>public class PricingEngine : IPricingEngine</code>
+        </div>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">🐍</div>
+        <h3>VBA ↔ Python (xlwings / Shell)</h3>
+        <p>Deux approches selon le contexte :<br/>
+        1. <strong>xlwings</strong> : bibliothèque Python qui expose les fonctions Python directement dans Excel/VBA via un UDF server.<br/>
+        2. <strong>Shell + JSON</strong> : VBA lance Python via Shell(), passe les paramètres en JSON, lit les résultats dans un fichier.</p>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">🗄️</div>
+        <h3>C# / Python ↔ SQL Server (ADO.NET / pyodbc)</h3>
+        <p>C# utilise <code>System.Data.SqlClient</code> (ADO.NET) pour SQL Server. Python utilise <code>pyodbc</code> avec "ODBC Driver 17". Les deux passent par des stored procedures pour les opérations complexes. Connection string : <code>Server=PERSO-AJE-DELL\BFASERVER01;Database=CommandoQuant;Trusted_Connection=yes</code>.</p>
+        <div class="callout" style="margin-top:0.8rem;font-size:0.82rem">
+          <strong>Junior :</strong> "ADO.NET" et "pyodbc" c'est juste le nom des bibliothèques qui permettent au code de parler à SQL Server. Comme un traducteur entre C# et la base de données.
+        </div>
+      </div>
+    </div>
+
+    <div class="diagram-container" style="margin-top:2rem">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Flux de données dans le pipeline de pricing</strong><br/>
+          La séquence détaille comment les données transitent entre chaque couche lors du calcul d'une option. Le focus est sur la fiabilité : chaque appel inter-langage retourne un code d'erreur, les données sont sérialisées en JSON ou passées via des arrays COM simples.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+sequenceDiagram
+  participant VBA as Excel VBA
+  participant COM as C# DLL (COM)
+  participant SQL as SQL Server BFASERVER01
+  participant PY as Python (xlwings)
+
+  VBA->>COM: CreateObject("CommandoQuant.PricingEngine")
+  VBA->>COM: Price(S=58.40, K=60, r=0.035, vol=0.28, T=0.25, type="C")
+  COM->>COM: BlackScholes.Calculate()
+  COM->>VBA: Array[price=2.45, delta=0.52, gamma=0.08, vega=0.18, theta=-0.02]
+  VBA->>SQL: INSERT tbl_Greeks (positionId, delta, gamma, ...) via ADODB
+  SQL->>VBA: OK (1 row inserted)
+  VBA->>PY: xlwings.call("var_calculator", "run", book_json)
+  PY->>SQL: SELECT * FROM tbl_HistoricalData WHERE date > [T-250]
+  PY->>PY: Monte Carlo 10 000 scénarios
+  PY->>VBA: {"var_99_1d": 125000, "es_99": 160000, "method": "mc"}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — CLASSES DÉTAIL ═══════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Classes</span>
+      <h2>Catalogue des classes par couche et langage</h2>
+    </div>
+    <table class="fo-table">
+      <thead>
+        <tr><th>Classe / Module</th><th>Langage</th><th>Layer</th><th>Responsabilité</th><th>Dépendances</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>COption</code></td><td>VBA + C#</td><td>Domain</td><td>Entité option : sous-jacent, strike, maturité, type, sens, notional</td><td>CMarketData</td></tr>
+        <tr><td><code>CPosition</code></td><td>VBA</td><td>Domain</td><td>Position live : option + Greeks calculés + état workflow</td><td>COption, CHedge</td></tr>
+        <tr><td><code>CGreeks</code></td><td>C#</td><td>Domain</td><td>Résultats de valorisation : Δ Γ ν θ ρ, prix, P&amp;L théorique</td><td>–</td></tr>
+        <tr><td><code>CHedge</code></td><td>VBA</td><td>Domain</td><td>Instrument de couverture : delta hedge (actions), vega hedge (options)</td><td>CPosition</td></tr>
+        <tr><td><code>CMarketData</code></td><td>VBA/C#</td><td>Domain</td><td>Données de marché : spot, vol surface, taux, dividendes</td><td>–</td></tr>
+        <tr><td><code>BlackScholesEngine</code></td><td>C#</td><td>Pricing Engine</td><td>Pricing EU options (BS), Greeks analytiques, vol implicite par Newton-Raphson</td><td>COption, CMarketData</td></tr>
+        <tr><td><code>BinomialTreeEngine</code></td><td>C#</td><td>Pricing Engine</td><td>Pricing options américaines (CRR), dividendes discrets, exercice anticipé</td><td>COption, CMarketData</td></tr>
+        <tr><td><code>MonteCarloEngine</code></td><td>C# / Python</td><td>Pricing Engine</td><td>Pricing path-dependent (barrières, asiatiques), VaR Monte Carlo</td><td>COption, CMarketData</td></tr>
+        <tr><td><code>VolSurface</code></td><td>VB.net</td><td>Pricing Engine</td><td>Surface de vol implicite : interpolation bilinéaire par (K/S, T)</td><td>CMarketData</td></tr>
+        <tr><td><code>VaRCalculator</code></td><td>Python</td><td>Analytics</td><td>VaR paramétrique, historique, Monte Carlo. ES (Expected Shortfall)</td><td>tbl_HistoricalData</td></tr>
+        <tr><td><code>StressTester</code></td><td>Python</td><td>Analytics</td><td>Scénarios stress (spot shock, vol shock, historiques)</td><td>VaRCalculator, tbl_Positions</td></tr>
+        <tr><td><code>IPositionRepository</code></td><td>C#</td><td>Data</td><td>Interface : Save, GetById, GetBook, Delete</td><td>–</td></tr>
+        <tr><td><code>CSqlPositionRepository</code></td><td>C#</td><td>Data</td><td>Accès SQL Server PERSO-AJE-DELL\BFASERVER01 via ADO.NET SqlClient, stored procedures</td><td>IPositionRepository</td></tr>
+        <tr style="opacity:0.4;text-decoration:line-through"><td><code>CAccessRepository</code></td><td>VBA</td><td>Data</td><td>❌ DÉCOMMISSIONNÉ — supprimé</td><td>—</td></tr>
+        <tr><td><code>CLogger</code></td><td>VBA + C#</td><td>Infra</td><td>Log sheet + fichier texte + base SQL. Niveaux INFO/WARN/ERROR/AUDIT</td><td>CConfig</td></tr>
+        <tr><td><code>CConfig</code></td><td>VBA</td><td>Infra</td><td>Paramètres depuis tbl_Config (connexion DB, limites Greeks, log path)</td><td>–</td></tr>
+        <tr><td><code>CApp</code></td><td>VBA</td><td>Infra</td><td>Composition Root : instancie et injecte tous les services</td><td>Toutes</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — PATTERNS ═════════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Design Patterns</span>
+      <h2>Patterns de conception — Cross-langage</h2>
+      <p>Les mêmes patterns classiques s'appliquent quelle que soit la technologie.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">🎯</div>
+        <h3>Strategy — Modèle de pricing</h3>
+        <p>Chaque modèle de pricing (BS, Binomial, MC) est une stratégie. <code>IPricingModel</code> définit le contrat. <code>PricingEngineFactory</code> sélectionne la stratégie selon le type de produit. Ajouter un modèle Heston = ajouter une stratégie, sans toucher au reste.</p>
+        <div class="callout" style="margin-top:0.8rem;font-size:0.82rem">
+          <code>IPricingModel.Price(option, md)</code><br/>
+          <code>IPricingModel.Greeks(option, md)</code>
+        </div>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">📦</div>
+        <h3>Repository — Accès SQL Server</h3>
+        <p>Sépare la logique métier de la persistance. <code>IPositionRepository</code> en C# définit le contrat. <code>CSqlPositionRepository</code> est l'unique implémentation — sur SQL Server <code>PERSO-AJE-DELL\BFASERVER01</code>. Access décommissionné.</p>
+        <div class="callout" style="margin-top:0.8rem;font-size:0.82rem">
+          <strong>Junior :</strong> Le "Repository Pattern", c'est comme demander à un assistant d'aller chercher tes fichiers. Tu lui dis "donne-moi la position POS-042" — tu ne sais pas s'il va dans une armoire, un coffre, ou un serveur. Il gère ça tout seul. Ici, l'armoire c'est SQL Server.
+        </div>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">🔗</div>
+        <h3>Composition Root (CApp)</h3>
+        <p>En VBA, <code>CApp</code> est le seul endroit où tout est câblé. Lance le PricingEngine COM, injecte la config, démarre le logger, charge le cache de positions. <code>ThisWorkbook.App</code> est accessible depuis tous les modules sans new/init dispersé.</p>
+      </div>
+      <div class="card fade-up delay-1">
+        <div class="card-icon">🏭</div>
+        <h3>Factory — Création d'options</h3>
+        <p><code>COptionFactory.Create(type, params)</code> instancie la bonne classe selon le type de produit (EU, AM, Barrière, Asiatique). L'appelant ne connaît pas la classe concrète — il passe les params bruts, la factory gère la construction.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">💾</div>
+        <h3>Cache — Greeks &amp; Positions</h3>
+        <p><code>CPositionCache</code> maintient un Dictionary VBA (positionId → CPosition + Greeks). Les lectures du blotter et du dashboard Greeks utilisent le cache. Invalidé à chaque reprice ou modification de position. x10 en performance sur 500+ positions.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🔄</div>
+        <h3>Observer — Alertes temps réel</h3>
+        <p><code>CRiskService</code> observe les Greeks agrégés. Dès qu'une limite est franchie, il notifie tous les abonnés (Risk Manager dashboard, logger, rapport d'exception). Découplage total entre le calcul et la notification.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 5 — PERFORMANCE ══════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag green">Performance</span>
+      <h2>Cookbook Performance — Multi-Stack</h2>
+      <p>Les règles d'or pour que le pipeline de calcul reste rapide même avec 1000+ positions.</p>
+    </div>
+    <table class="fo-table">
+      <thead><tr><th>Contexte</th><th>Problème</th><th>Solution</th><th>Gain</th></tr></thead>
+      <tbody>
+        <tr><td>VBA ↔ COM (.NET)</td><td>Appel COM par option = lent</td><td>Passer toutes les options en batch array. <code>PricingEngine.PriceBook(optionArray)</code></td><td>x50 vs appels individuels</td></tr>
+        <tr><td>VBA lecture Excel</td><td>Lecture cellule par cellule</td><td>Variant array : <code>arr = tbl.DataBodyRange.Value</code></td><td>x100 vs .Cells(i,j)</td></tr>
+        <tr><td>C# Monte Carlo</td><td>10 000 scénarios séquentiels</td><td><code>Parallel.For(0, 10000, i => SimulatePath(i))</code></td><td>x4-8 selon nb de cores</td></tr>
+        <tr><td>Python NumPy</td><td>Boucle Python sur 250j</td><td>Vectorisation NumPy : <code>returns = np.diff(prices) / prices[:-1]</code></td><td>x100 vs boucle Python</td></tr>
+        <tr><td>SQL batch</td><td>INSERT ligne par ligne</td><td>Stored procedure avec TVP (Table-Valued Parameter)</td><td>x20 vs INSERT unitaire</td></tr>
+        <tr><td>Cache VBA</td><td>Relire tbl_Positions à chaque action</td><td><code>CPositionCache.GetByBook(bookId)</code> depuis Dictionary</td><td>O(1) vs O(n)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Architecture Multi-Stack · VBA · C# · VB.net · Python · SQL Server PERSO-AJE-DELL\BFASERVER01 · Access décommissionné</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="implementation.html">Implémentation</a> · <a href="datamodel.html">Data Model</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

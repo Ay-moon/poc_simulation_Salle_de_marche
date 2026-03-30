@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Features E2E — CommandoQuant Quant Equity Risk</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html" class="active">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>⚡ Features End-to-End</h1>
+  <p>5 features complètes : user story, règles métier, workflow, design multi-stack, implémentation et UI</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Features</span>
+  </div>
+</div>
+
+<!-- ═══ FEATURE 1 — OPTION CAPTURE + PRICING ════════════════ -->
+<section class="section">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--fo-amber);color:var(--fo-dark);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;flex-shrink:0">1</div>
+      <div>
+        <span class="tag">Feature 1</span>
+        <h2 style="font-size:1.5rem;margin-top:0.3rem">Option Capture + Pricing Black-Scholes</h2>
+        <p style="color:var(--fo-muted)">User story : le trader saisit une option Call sur TotalEnergies → l'outil price avec BS → sauvegarde les Greeks → met à jour le blotter.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:2rem">
+      <div>
+        <h4 style="color:var(--fo-amber);margin-bottom:0.8rem">Règles métier</h4>
+        <ul style="font-size:0.87rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>Tous les champs obligatoires : Underlying, Type, Strike, Maturity, Notional, BuySell</li>
+          <li>Strike &gt; 0 (validation CPositionValidator)</li>
+          <li>Maturity &gt; Today (une option expirée n'a pas de sens)</li>
+          <li>Notional doit être un multiple du lot (100 pour les listées)</li>
+          <li>Vol implicite récupérée depuis la surface de vol (K/S, T)</li>
+          <li>Modèle EU → Black-Scholes, modèle US → Binomial CRR</li>
+          <li>Prix et Greeks sauvegardés dans tbl_Greeks (SQL/Access)</li>
+        </ul>
+      </div>
+      <div>
+        <h4 style="color:var(--fo-amber);margin-bottom:0.8rem">Séquence multi-stack</h4>
+        <div class="diagram-container">
+          <div class="diagram-body" style="padding:1rem">
+            <div class="mermaid">
+sequenceDiagram
+  participant UI as DealTicket (VBA)
+  participant APP as CApp
+  participant VS as VolSurface (VB.net COM)
+  participant BS as BlackScholesEngine (C# COM)
+  participant DB as SQL/Access
+
+  UI->>APP: btnPriceOption_Click()
+  APP->>VS: GetVol(spot=58.40, K=60, T=0.25)
+  VS->>APP: impliedVol = 28%
+  APP->>BS: Price(58.40, 60, 0.035, 0.28, 0.25, "CALL")
+  BS->>APP: price=2.45€
+  APP->>BS: Greeks(58.40, 60, 0.035, 0.28, 0.25, "CALL")
+  BS->>APP: [Δ=0.52, Γ=0.08, ν=0.18, θ=-0.02, ρ=0.05]
+  APP->>DB: INSERT tbl_Greeks (all values)
+  APP->>UI: RefreshBlotter() + UpdateGreeksDashboard()
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">VBA</span><span class="code-file">DealTicket_Sheet.bas — Bouton Pricer</span></div>
+      <pre><span class="kw">Private Sub</span> <span class="fn">btnPriceOption_Click</span>()
+    <span class="kw">Dim</span> <span class="nm">app</span> <span class="kw">As</span> <span class="tp">CApp</span>  : <span class="kw">Set</span> <span class="nm">app</span> = ThisWorkbook.App
+    <span class="kw">Dim</span> <span class="nm">ws</span>  <span class="kw">As</span> Worksheet : <span class="kw">Set</span> <span class="nm">ws</span> = Me
+
+    <span class="cm">' 1. Construire COption depuis les cellules UI</span>
+    <span class="kw">Dim</span> <span class="nm">opt</span> <span class="kw">As New</span> <span class="tp">COption</span>
+    <span class="nm">opt</span>.Underlying = <span class="nm">ws</span>.Range("D5").Value    <span class="cm">' ex: "TTE.PA"</span>
+    <span class="nm">opt</span>.OptionType  = <span class="nm">ws</span>.Range("D6").Value    <span class="cm">' "CALL"</span>
+    <span class="nm">opt</span>.ExerciseStyle = "EU"
+    <span class="nm">opt</span>.Strike      = <span class="nm">ws</span>.Range("D7").Value    <span class="cm">' 60.00</span>
+    <span class="nm">opt</span>.Maturity    = <span class="nm">ws</span>.Range("D8").Value    <span class="cm">' date</span>
+    <span class="nm">opt</span>.Notional    = <span class="nm">ws</span>.Range("D9").Value    <span class="cm">' 100000</span>
+    <span class="nm">opt</span>.BuySell     = <span class="nm">ws</span>.Range("D10").Value   <span class="cm">' "BUY"</span>
+
+    <span class="cm">' 2. Récupérer vol implicite depuis la surface (VB.net)</span>
+    <span class="kw">Dim</span> <span class="nm">spot</span> <span class="kw">As Double</span>
+    <span class="nm">spot</span> = <span class="nm">app</span>.MarketData.GetSpot(<span class="nm">opt</span>.Underlying)
+
+    <span class="kw">Dim</span> <span class="nm">vol</span> <span class="kw">As Double</span>
+    <span class="nm">vol</span> = <span class="nm">app</span>.VolSurface.GetVol(<span class="nm">spot</span>, <span class="nm">opt</span>.Strike, <span class="nm">opt</span>.Maturity_Years)
+
+    <span class="cm">' 3. Pricing via C# COM DLL</span>
+    <span class="kw">Dim</span> <span class="nm">r</span> <span class="kw">As Double</span> : <span class="nm">r</span> = <span class="nm">app</span>.Config.GetParam("DEFAULT_RISK_FREE")
+    <span class="kw">Dim</span> <span class="nm">price</span> <span class="kw">As Double</span>
+    <span class="nm">price</span> = <span class="nm">app</span>.PricingEngine.Price(<span class="nm">spot</span>, <span class="nm">opt</span>.Strike, <span class="nm">r</span>, <span class="nm">vol</span>, _
+                                      <span class="nm">opt</span>.Maturity_Years, <span class="nm">opt</span>.OptionType)
+
+    <span class="kw">Dim</span> <span class="nm">greeks</span> <span class="kw">As Variant</span>
+    <span class="nm">greeks</span> = <span class="nm">app</span>.PricingEngine.Greeks(<span class="nm">spot</span>, <span class="nm">opt</span>.Strike, <span class="nm">r</span>, <span class="nm">vol</span>, _
+                                        <span class="nm">opt</span>.Maturity_Years, <span class="nm">opt</span>.OptionType)
+
+    <span class="cm">' 4. Sauvegarder et rafraîchir</span>
+    <span class="nm">app</span>.Workflow.Transition <span class="nm">opt</span>, "PRICÉ", <span class="nm">price</span>, <span class="nm">greeks</span>
+    <span class="nm">app</span>.RefreshBlotter
+    MsgBox "Option pricée : " &amp; Format(<span class="nm">price</span>, "0.0000") &amp; "€" &amp; vbNewLine &amp; _
+           "Δ=" &amp; Format(<span class="nm">greeks</span>(0),"0.000") &amp; _
+           " Γ=" &amp; Format(<span class="nm">greeks</span>(1),"0.000"), vbInformation
+<span class="kw">End Sub</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURE 2 — GREEKS TEMPS RÉEL ═══════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--fo-gold);color:var(--fo-dark);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;flex-shrink:0">2</div>
+      <div>
+        <span class="tag green">Feature 2</span>
+        <h2 style="font-size:1.5rem;margin-top:0.3rem">Dashboard Greeks — Agrégation par Book</h2>
+        <p style="color:var(--fo-muted)">User story : le Risk Manager voit les Greeks agrégés de tout le book en temps réel et reçoit une alerte si une limite est franchie.</p>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">Δ</div>
+        <h3>Delta agrégé</h3>
+        <p>Somme des Deltas × Notionaux × Spot de chaque position du book.<br/><br/>
+        <strong>Exemple book EQUITY-01 :</strong><br/>
+        TTE Call : +0.52 × 100K × 58.40 = +3 037K€<br/>
+        BNP Put  : −0.38 × 50K × 42.10 = −800K€<br/>
+        <strong>Δ_book = +2 237K€</strong><br/>
+        Limite : ±5 000K€ → OK ✅</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">Γ</div>
+        <h3>Gamma agrégé</h3>
+        <p>Gamma mesure la convexité du book en cash (€ par 1€ de variation spot).<br/><br/>
+        <strong>Γ_book = +12 500€ /€²</strong><br/>
+        Un Gamma positif = le book bénéficie des grands mouvements (long gamma). Un Gamma négatif = le book perd lors des grands mouvements (short gamma = risque de crash).<br/>
+        Limite Gamma book : ±25 000€/€²</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">ν</div>
+        <h3>Vega agrégé</h3>
+        <p>Sensibilité totale du book à 1% de hausse de la vol implicite.<br/><br/>
+        <strong>ν_book = +48 000€ / 1%</strong><br/>
+        Long Vega = le book gagne quand la vol monte (crise). Short Vega = le book perd en cas d'explosion de vol (risque vendeur d'options).<br/>
+        Limite Vega : ±100 000€/1%</p>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:1.5rem">
+      <strong>Alerte limite automatique :</strong> <code>CRiskService.CheckGreekLimits(bookId)</code> est appelé après chaque reprice. Si un Greek dépasse la limite définie dans <code>tbl_RiskLimits</code>, une alerte rouge apparaît dans le dashboard Excel et une ligne est écrite dans <code>tbl_AuditLog</code>. Le Risk Manager reçoit une notification par email (Outlook Automation).
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURE 3 — P&L ATTRIBUTION ═════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--fo-teal);color:var(--fo-white);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;flex-shrink:0">3</div>
+      <div>
+        <span class="tag teal">Feature 3</span>
+        <h2 style="font-size:1.5rem;margin-top:0.3rem">P&amp;L Attribution Quotidien</h2>
+        <p style="color:var(--fo-muted)">User story : le Middle Office explique pourquoi le book a gagné ou perdu X€ aujourd'hui — décomposé par source de risque.</p>
+      </div>
+    </div>
+    <table class="fo-table">
+      <thead>
+        <tr><th>Composante</th><th>Formule</th><th>ΔParam</th><th>P&amp;L (€)</th><th>% du total</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Delta P&amp;L</strong></td>
+          <td>Δ_book × ΔS</td>
+          <td>+0.70€ (TTE +1.2%, BNP +0.5%)</td>
+          <td style="color:var(--fo-green)">+156 590€</td>
+          <td>62%</td>
+        </tr>
+        <tr>
+          <td><strong>Gamma P&amp;L</strong></td>
+          <td>½ × Γ × (ΔS)²</td>
+          <td>ΔS moyen = +0.70€</td>
+          <td style="color:var(--fo-green)">+30 625€</td>
+          <td>12%</td>
+        </tr>
+        <tr>
+          <td><strong>Vega P&amp;L</strong></td>
+          <td>ν_book × Δσ</td>
+          <td>Vol implicite +0.5%</td>
+          <td style="color:var(--fo-green)">+24 000€</td>
+          <td>10%</td>
+        </tr>
+        <tr>
+          <td><strong>Theta P&amp;L</strong></td>
+          <td>θ_book × Δt</td>
+          <td>−1 jour (dégradation temps)</td>
+          <td style="color:var(--fo-red)">−38 500€</td>
+          <td>−15%</td>
+        </tr>
+        <tr>
+          <td><strong>Rho P&amp;L</strong></td>
+          <td>ρ_book × Δr</td>
+          <td>Taux OAT 10y +2bp</td>
+          <td style="color:var(--fo-green)">+2 400€</td>
+          <td>1%</td>
+        </tr>
+        <tr>
+          <td><strong>Résidu</strong></td>
+          <td>P&amp;L réel − Σ(Greeks P&amp;L)</td>
+          <td>—</td>
+          <td style="color:var(--fo-muted)">+1 885€</td>
+          <td>&lt;1%</td>
+        </tr>
+        <tr style="font-weight:700;background:#F0F7FF">
+          <td><strong>P&amp;L Total théorique</strong></td>
+          <td>Σ composantes</td>
+          <td>—</td>
+          <td style="color:var(--fo-green)"><strong>+177 000€</strong></td>
+          <td>100%</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout green" style="margin-top:1rem">
+      <strong>Réconciliation :</strong> Le résidu de +1 885€ représente &lt;1% du P&amp;L total — acceptable. Un résidu &gt;5% signale un problème de données de marché ou un modèle inadéquat. <code>CReportService.GeneratePnLReport(bookId, date)</code> génère ce tableau directement dans Excel avec mise en forme conditionnelle (vert/rouge).
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURE 4 — VAR ═══════════════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--fo-green);color:var(--fo-dark);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;flex-shrink:0">4</div>
+      <div>
+        <span class="tag green">Feature 4</span>
+        <h2 style="font-size:1.5rem;margin-top:0.3rem">VaR Calculation — 3 Méthodes</h2>
+        <p style="color:var(--fo-muted)">User story : le Risk Manager lance le calcul VaR EOD et obtient les 3 méthodes avec comparaison et résultat de backtesting.</p>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <div class="diagram-container">
+          <div class="diagram-header">
+            <div class="expert-icon">🎲</div>
+            <div class="expert-tooltip">
+              <strong>Quelle VaR utiliser ?</strong><br/>
+              La VaR paramétrique est rapide mais ignore les non-linéarités (options). La VaR historique capture mieux les fat tails mais dépend de l'historique disponible. La VaR Monte Carlo est la plus précise pour les options mais est plus lente. On utilise les 3 et on retient la plus conservatrice.
+            </div>
+          </div>
+          <div class="diagram-body">
+            <div class="mermaid">
+flowchart LR
+  subgraph LAUNCH["VBA : Lancement VaR"]
+    B1["btnCalcVaR_Click()\nbook='BOOK-EQ-01'"]
+  end
+
+  subgraph PY["Python : VaRCalculator"]
+    P1["Charger positions\net Greeks depuis SQL"]
+    P2["Charger 250j\nhistorique tbl_MarketData"]
+    P3["VaR Paramétrique\n→ 98 500€"]
+    P4["VaR Historique\n→ 112 000€"]
+    P5["Monte Carlo 10K\n→ 125 000€"]
+    P6["ES(99%)\n→ 162 000€"]
+    P1 --> P2
+    P2 --> P3 & P4 & P5
+    P3 & P4 & P5 --> P6
+  end
+
+  subgraph RESULT["VBA : Rapport"]
+    R1["INSERT tbl_VaR"]
+    R2["Alerte si VaR > limite"]
+    R3["Affichage dashboard"]
+  end
+
+  LAUNCH --> PY --> RESULT
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h4 style="color:var(--fo-dark);margin-bottom:1rem;font-weight:700">Résultats VaR — BOOK-EQ-01 · 15/03/2024</h4>
+        <table class="fo-table">
+          <thead><tr><th>Méthode</th><th>VaR 1j 99%</th><th>Limite</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Paramétrique</td>
+              <td>98 500€</td>
+              <td>200 000€</td>
+              <td><span class="state-badge state-fixed">OK</span></td>
+            </tr>
+            <tr>
+              <td>Historique</td>
+              <td>112 000€</td>
+              <td>200 000€</td>
+              <td><span class="state-badge state-fixed">OK</span></td>
+            </tr>
+            <tr>
+              <td>Monte Carlo</td>
+              <td><strong>125 000€</strong></td>
+              <td>200 000€</td>
+              <td><span class="state-badge state-fixed">OK</span></td>
+            </tr>
+            <tr>
+              <td>ES (CVaR 99%)</td>
+              <td>162 000€</td>
+              <td>300 000€</td>
+              <td><span class="state-badge state-fixed">OK</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout blue" style="margin-top:1rem">
+          <strong>Backtesting :</strong> Le P&amp;L réel du jour suivant est comparé à la VaR. Sur 250j, CommandoQuant compte les exceptions (|P&amp;L réel| &gt; VaR MC). Selon Bâle III : ≤4 = zone verte · 5-9 = zone jaune · ≥10 = zone rouge. Compteur courant : <strong>2/250 → Zone verte ✅</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURE 5 — STRESS TESTS ═════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem">
+      <div style="background:var(--fo-purple);color:var(--fo-white);width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;flex-shrink:0">5</div>
+      <div>
+        <span class="tag purple">Feature 5</span>
+        <h2 style="font-size:1.5rem;margin-top:0.3rem">Stress Testing — Scénarios de crise</h2>
+        <p style="color:var(--fo-muted)">User story : le Risk Manager simule l'impact d'un krach boursier ou d'une explosion de vol sur le book pour le Comité de Risque.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div>
+        <h4 style="color:var(--fo-dark);margin-bottom:1rem;font-weight:700">Scénarios disponibles — StressTester.py</h4>
+        <table class="fo-table">
+          <thead><tr><th>Scénario</th><th>Choc Spot</th><th>Choc Vol</th><th>P&amp;L book</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Krach 1987</td>
+              <td style="color:var(--fo-red)">−22%</td>
+              <td style="color:var(--fo-red)">+40 pts</td>
+              <td style="color:var(--fo-red)">−485 000€</td>
+            </tr>
+            <tr>
+              <td>Lehman 2008</td>
+              <td style="color:var(--fo-red)">−12%</td>
+              <td style="color:var(--fo-red)">+25 pts</td>
+              <td style="color:var(--fo-red)">−238 000€</td>
+            </tr>
+            <tr>
+              <td>Covid Mars 2020</td>
+              <td style="color:var(--fo-red)">−34%</td>
+              <td style="color:var(--fo-red)">+55 pts</td>
+              <td style="color:var(--fo-red)">−820 000€</td>
+            </tr>
+            <tr>
+              <td>Rallye haussier</td>
+              <td style="color:var(--fo-green)">+15%</td>
+              <td style="color:var(--fo-green)">−10 pts</td>
+              <td style="color:var(--fo-green)">+315 000€</td>
+            </tr>
+            <tr>
+              <td>Vol flat +30 pts</td>
+              <td>0%</td>
+              <td style="color:var(--fo-red)">+30 pts</td>
+              <td style="color:var(--fo-green)">+144 000€</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Python</span><span class="code-file">stress_tester.py</span></div>
+          <pre style="padding:0.8rem 1rem;font-family:var(--font-mono);font-size:0.8rem;color:#E0E0E0;line-height:1.6;background:#1E2A3A;overflow-x:auto"><span class="kw">def</span> <span class="fn">run_stress</span>(book_id: str, scenarios: list) -> dict:
+    <span class="st">"""Applique des scénarios de stress et
+    retourne le P&L par scénario."""</span>
+    greeks = <span class="fn">load_greeks</span>(book_id)
+    results = {}
+
+    <span class="kw">for</span> scenario <span class="kw">in</span> scenarios:
+        spot_shock = scenario[<span class="st">'spot_shock'</span>]   <span class="cm"># ex: -0.22</span>
+        vol_shock  = scenario[<span class="st">'vol_shock'</span>]    <span class="cm"># ex: +0.40</span>
+
+        <span class="cm"># P&L delta + gamma (choc spot)</span>
+        pnl_spot = (greeks.Delta * spot_shock * greeks.Spot
+                  + 0.5 * greeks.Gamma * (spot_shock * greeks.Spot)**2).sum()
+
+        <span class="cm"># P&L vega (choc vol)</span>
+        pnl_vol = (greeks.Vega * vol_shock * 100).sum()
+
+        <span class="cm"># Reprice complet optionnel (MC)</span>
+        results[scenario[<span class="st">'name'</span>]] = {
+            <span class="st">'pnl_spot'</span>: <span class="nb">round</span>(pnl_spot, 2),
+            <span class="st">'pnl_vol'</span>:  <span class="nb">round</span>(pnl_vol, 2),
+            <span class="st">'pnl_total'</span>: <span class="nb">round</span>(pnl_spot + pnl_vol, 2)
+        }
+    <span class="kw">return</span> results</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MÉTHODE COMMANDO ══════════════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Méthode</span>
+      <h2>Méthode Commando — Comment avancer feature par feature</h2>
+      <p>Pour chaque nouvelle feature quant, suivre ce cycle de 8 étapes.</p>
+    </div>
+    <div class="grid grid-4">
+      <div class="card dark fade-up delay-1">
+        <div class="card-icon">📖</div>
+        <h3>1. User Story</h3>
+        <p>Qui fait quoi, avec quel résultat attendu. Toujours partir du point de vue utilisateur (trader, risk manager, ops).</p>
+      </div>
+      <div class="card dark fade-up delay-2">
+        <div class="card-icon">📐</div>
+        <h3>2. Modèle Quant</h3>
+        <p>Choisir le bon modèle : BS pour EU, Binomial pour US, MC pour exotiques. Valider analytiquement avant de coder.</p>
+      </div>
+      <div class="card dark fade-up delay-3">
+        <div class="card-icon">🔄</div>
+        <h3>3. Workflow</h3>
+        <p>États et transitions impliqués. Séquence inter-langages (VBA → C# → Python → SQL). Cas d'erreur.</p>
+      </div>
+      <div class="card dark fade-up delay-4">
+        <div class="card-icon">🏗️</div>
+        <h3>4. Design Multi-Stack</h3>
+        <p>Quelles classes dans quel langage. Interface COM ou xlwings. Schéma de la table SQL à créer.</p>
+      </div>
+      <div class="card dark fade-up delay-1">
+        <div class="card-icon">💻</div>
+        <h3>5. Implémentation</h3>
+        <p>C# : tests unitaires xUnit. VBA : Immediate Window. Python : pytest. SQL : scripts DDL versionnés.</p>
+      </div>
+      <div class="card dark fade-up delay-2">
+        <div class="card-icon">🖥️</div>
+        <h3>6. UI Excel</h3>
+        <p>Boutons feuille, mapping cellules ↔ propriétés. Mise en forme conditionnelle (alertes). Refresh blotter.</p>
+      </div>
+      <div class="card dark fade-up delay-3">
+        <div class="card-icon">⚡</div>
+        <h3>7. Perf Pass</h3>
+        <p>Batch arrays pour COM. Parallel.For en C#. NumPy vectorisé en Python. Batch INSERT SQL. Timer avant/après.</p>
+      </div>
+      <div class="card dark fade-up delay-4">
+        <div class="card-icon">📝</div>
+        <h3>8. Doc &amp; Audit</h3>
+        <p>Mettre à jour cette page + data model. S'assurer que l'audit trail est complet. Valider la réconciliation P&L.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Features End-to-End · 5 Features Quant · Méthode Commando</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="implementation.html">Implémentation</a> · <a href="runbook.html">Runbook</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

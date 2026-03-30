@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Runbook — CommandoQuant Multi-Stack</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="runbook.html" class="runbook-link active">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>📘 Runbook — Installation &amp; Stack Technique</h1>
+  <p>Guide complet de déploiement : Excel VBA · C# DLL · VB.net · Python · <strong>SQL Server PERSO-AJE-DELL\BFASERVER01</strong></p>
+  <p style="margin-top:0.5rem;font-size:0.88rem;color:#F0B429">⚠️ Microsoft Access décommissionné — SQL Server est l'unique source de données</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Runbook</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 1 — PRÉREQUIS ════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Prérequis</span>
+      <h2>Stack technique — Composants requis</h2>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <table class="fo-table">
+          <thead><tr><th>Composant</th><th>Version minimale</th><th>Rôle</th><th>Obligatoire</th></tr></thead>
+          <tbody>
+            <tr><td>Microsoft Excel</td><td>2016 / Office 365</td><td>UI, VBA orchestration, ListObjects</td><td>✅</td></tr>
+            <tr><td>.NET Framework</td><td>4.8+</td><td>Runtime C# et VB.net DLLs</td><td>✅</td></tr>
+            <tr><td>Visual Studio / VS Build Tools</td><td>2019+</td><td>Compilation des DLLs .NET</td><td>✅ (dev)</td></tr>
+            <tr><td>Python</td><td>3.9+</td><td>VaR, stress tests, analytics</td><td>✅</td></tr>
+            <tr><td>xlwings</td><td>0.28+</td><td>Interop Excel ↔ Python</td><td>✅</td></tr>
+            <tr><td>NumPy / Pandas / SciPy</td><td>latest</td><td>Calculs vectorisés VaR</td><td>✅</td></tr>
+            <tr><td><strong>SQL Server</strong></td><td><strong>PERSO-AJE-DELL\BFASERVER01</strong></td><td><strong>Base de données unique — production</strong></td><td>✅ Obligatoire</td></tr>
+            <tr><td>ODBC Driver 17 for SQL Server</td><td>17.x+</td><td>Driver pyodbc Python → SQL Server</td><td>✅</td></tr>
+            <tr><td>Scripting.Dictionary</td><td>—</td><td>Cache VBA (Windows seulement)</td><td>✅</td></tr>
+            <tr style="opacity:0.5;text-decoration:line-through"><td>Microsoft Access</td><td>—</td><td>❌ DÉCOMMISSIONNÉ — ne plus utiliser</td><td>Non</td></tr>
+          </tbody>
+        </table>
+        <div class="callout green" style="margin-top:1rem">
+          <strong>🎯 Architecture retenue — SQL Server uniquement :</strong> Toutes les données transitent par <code>PERSO-AJE-DELL\BFASERVER01</code>. Les tables existent déjà. Microsoft Access est décommissionné. Excel VBA, Python (var_engine.py) et C# se connectent tous au même serveur SQL.
+        </div>
+        <div class="callout blue" style="margin-top:0.8rem">
+          <strong>💡 Expert Data Analyst parle au junior :</strong><br/>
+          Tu te demandes pourquoi on enlève Access ? Imagine que tu as un cahier de notes (Access) vs un vrai dossier de classement dans une armoire verrouillée (SQL Server). Le cahier, si deux personnes écrivent en même temps, ça fout le bazar. L'armoire SQL Server, elle gère 100 personnes à la fois, elle garde une trace de tout, et si quelqu'un fait une bêtise, elle peut tout annuler. En salle de marché, une mauvaise donnée = une mauvaise décision = des millions perdus.
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--fo-dark);margin-bottom:1rem;font-weight:700">Installation Python — commandes</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">Shell</span><span class="code-file">setup_python_env.bat</span></div>
+          <pre style="padding:1rem 1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#E0E0E0;line-height:1.8;background:#1E2A3A;overflow-x:auto"><span class="cm"># Créer un environnement virtuel dédié</span>
+python -m venv .venv
+.venv\Scripts\activate
+
+<span class="cm"># Installer les dépendances quant</span>
+pip install xlwings numpy pandas scipy
+pip install sqlalchemy pyodbc
+pip install pytest pytest-cov          <span class="cm"># tests</span>
+pip install jupyter matplotlib seaborn  <span class="cm"># exploration</span>
+
+<span class="cm"># Enregistrer xlwings comme add-in Excel</span>
+xlwings addin install
+
+<span class="cm"># Vérification</span>
+python -c "import xlwings; print('xlwings OK:', xlwings.__version__)"
+python -c "import numpy;  print('numpy OK:',  numpy.__version__)"
+python -c "import pandas; print('pandas OK:', pandas.__version__)"</pre>
+        </div>
+
+        <h3 style="color:var(--fo-dark);margin:1.5rem 0 1rem;font-weight:700">Enregistrement DLLs .NET</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">CMD (admin)</span><span class="code-file">register_dlls.bat</span></div>
+          <pre style="padding:1rem 1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#E0E0E0;line-height:1.8;background:#1E2A3A;overflow-x:auto"><span class="cm">:: Compiler les DLLs .NET (si source disponible)</span>
+msbuild CommandoQuant.sln /t:Build /p:Configuration=Release
+
+<span class="cm">:: Enregistrer la DLL C# comme serveur COM</span>
+regasm.exe /codebase "bin\Release\CommandoQuant.Pricing.dll"
+regasm.exe /codebase "bin\Release\CommandoQuant.VolSurface.dll"
+
+<span class="cm">:: Vérifier l'enregistrement</span>
+regasm.exe /unregister "bin\Release\CommandoQuant.Pricing.dll" /nologo
+<span class="cm">:: → Doit afficher "Types registered successfully"</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — INSTALLATION ═════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">Installation</span>
+      <h2>Mise en place en 8 étapes</h2>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <h4>1. Installer Python + dépendances</h4>
+            <p>Exécuter <code>setup_python_env.bat</code> depuis le dossier CommandoQuant. Vérifier que <code>xlwings addin install</code> s'est bien déroulé (add-in visible dans Excel → Options → Compléments).</p>
+          </div>
+          <div class="timeline-item">
+            <h4>2. Compiler et enregistrer les DLLs .NET</h4>
+            <p>Ouvrir <code>CommandoQuant.sln</code> dans Visual Studio. Build → Release. Exécuter <code>register_dlls.bat</code> en tant qu'Administrateur. Vérifier : <code>CreateObject("CommandoQuant.BlackScholesEngine")</code> dans la Immediate Window VBA ne doit pas lever d'erreur.</p>
+          </div>
+          <div class="timeline-item">
+            <h4>3. Vérifier les tables SQL Server existantes</h4>
+            <p>Les tables existent déjà sur <code>PERSO-AJE-DELL\BFASERVER01 / CommandoQuant</code>. Vérifier dans SSMS : <code>SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'</code>. Doit retourner au moins : tbl_Positions, tbl_Greeks, tbl_VaR, tbl_MarketData, tbl_VolSurface, tbl_StressTest, tbl_AuditLog. Si tables manquantes, exécuter le DDL de la page Data Model.</p>
+            <div style="margin-top:0.5rem;background:rgba(0,200,83,0.06);border-left:3px solid #00C853;padding:0.5rem 0.8rem;border-radius:4px;font-size:0.82rem">
+              💡 <strong>Junior :</strong> SSMS = SQL Server Management Studio. C'est le "tableau de bord" de SQL Server. Comme le Panneau de Contrôle de Windows, mais pour les bases de données. Tu peux y voir toutes les tables, lancer des requêtes, vérifier que tout va bien.
+            </div>
+          </div>
+          <div class="timeline-item">
+            <h4>4. Ouvrir CommandoQuant.xlsm</h4>
+            <p>Activer les macros. Ajouter la référence COM : VBE → Outils → Références → cocher "Microsoft Scripting Runtime" et "Microsoft ActiveX Data Objects 6.1". Activer l'add-in xlwings.</p>
+          </div>
+          <div class="timeline-item">
+            <h4>5. Configurer tbl_Config dans SQL Server</h4>
+            <p>Dans SSMS, sur <code>PERSO-AJE-DELL\BFASERVER01</code>, mettre à jour les paramètres clés :</p>
+            <div style="background:#1E2A3A;border-radius:6px;padding:0.6rem 0.8rem;font-family:monospace;font-size:0.78rem;color:#B0BEC5;margin-top:0.5rem">
+              UPDATE tbl_Config SET ParamValue = 'PERSO-AJE-DELL\BFASERVER01' WHERE ParamKey = 'SQL_SERVER';<br/>
+              UPDATE tbl_Config SET ParamValue = 'CommandoQuant' WHERE ParamKey = 'SQL_DATABASE';<br/>
+              UPDATE tbl_Config SET ParamValue = '0.035' WHERE ParamKey = 'DEFAULT_RISK_FREE';<br/>
+              UPDATE tbl_Config SET ParamValue = '10000' WHERE ParamKey = 'MC_SIMULATIONS';
+            </div>
+            <div style="margin-top:0.5rem;font-size:0.82rem;color:var(--fo-muted)">Feuille Excel "Config" → la chaîne de connexion SQL Server est désormais la seule configurée. Supprimer toute référence à Access.</div>
+          </div>
+          <div class="timeline-item">
+            <h4>6. Charger la surface de volatilité</h4>
+            <p>Feuille "Vol Surface" → importer les données de vol implicite (format CSV Bloomberg ou saisie manuelle). Vérifier : <code>?ThisWorkbook.App.VolSurface.GetVol(58.4, 60, 0.25)</code> retourne une valeur entre 0.15 et 0.50.</p>
+          </div>
+          <div class="timeline-item">
+            <h4>7. Charger l'historique de cours</h4>
+            <p>Feuille "Market Data" → importer 250j minimum de cours de clôture et rendements pour chaque sous-jacent. La VaR historique nécessite au moins 250 observations.</p>
+          </div>
+          <div class="timeline-item">
+            <h4>8. Test de bout en bout</h4>
+            <p>Saisir une position test : Deal Ticket → TTE.PA · Call · K=60 · T=3M · N=100 · BUY. Cliquer "Pricer" → vérifier le prix et les Greeks. Cliquer "Calc VaR" → vérifier les 3 résultats VaR. Contrôler tbl_AuditLog.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--fo-dark);margin-bottom:1rem;font-weight:700">Structure des feuilles Excel</h3>
+        <table class="fo-table">
+          <thead><tr><th>Feuille</th><th>Table / Rôle</th><th>Protégée</th></tr></thead>
+          <tbody>
+            <tr><td>Blotter</td><td>tbl_Positions — vue live</td><td>Non</td></tr>
+            <tr><td>Deal Ticket</td><td>Formulaire saisie option</td><td>Non</td></tr>
+            <tr><td>Greeks Dashboard</td><td>Tableau de bord Greeks agrégés</td><td>Non</td></tr>
+            <tr><td>VaR Report</td><td>Résultats VaR + backtesting</td><td>Non</td></tr>
+            <tr><td>P&amp;L</td><td>Attribution P&amp;L quotidienne</td><td>Non</td></tr>
+            <tr><td>Vol Surface</td><td>Grille vol implicite (K/S, T)</td><td>Non</td></tr>
+            <tr><td>Market Data</td><td>Cours historiques sous-jacents</td><td>Non</td></tr>
+            <tr><td>Stress Test</td><td>Résultats scénarios stress</td><td>Non</td></tr>
+            <tr><td>Config</td><td>tbl_Config — paramètres</td><td>Partielle</td></tr>
+            <tr><td>AuditLog</td><td>tbl_AuditLog — immuable</td><td>✅ Oui</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="color:var(--fo-dark);margin:1.5rem 0 1rem;font-weight:700">Test de diagnostic VBA + SQL Server</h3>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">VBA</span><span class="code-file">Immediate Window — Tests de démarrage</span></div>
+          <pre style="padding:0.8rem 1rem;font-family:var(--font-mono);font-size:0.8rem;color:#E0E0E0;line-height:1.8;background:#1E2A3A;overflow-x:auto"><span class="cm">' Test 1 — CApp initialisé</span>
+? ThisWorkbook.App.IsInitialized
+<span class="cm">→ True ✅</span>
+
+<span class="cm">' Test 2 — Pricing DLL COM</span>
+? ThisWorkbook.App.PricingEngine.Price(58.4, 60, 0.035, 0.28, 0.25, "CALL")
+<span class="cm">→ 2.4512 ✅ (valeur approx.)</span>
+
+<span class="cm">' Test 3 — Vol Surface VB.net</span>
+? ThisWorkbook.App.VolSurface.GetVol(58.4, 60, 0.25)
+<span class="cm">→ 0.2800 ✅</span>
+
+<span class="cm">' Test 4 — Connexion SQL Server (PERSO-AJE-DELL\BFASERVER01)</span>
+? ThisWorkbook.App.Repo.TestConnection()
+<span class="cm">→ "SQL Server: PERSO-AJE-DELL\BFASERVER01 / CommandoQuant OK" ✅</span>
+
+<span class="cm">' Test 5 — xlwings Python → SQL Server</span>
+? ThisWorkbook.App.RunVaR("BOOK-EQ-TEST", 0.99)
+<span class="cm">→ {"var_mc": 0, "var_hist": 0, "var_param": 0} ✅ (book vide)</span>
+
+<span class="cm">' Test 6 — Vérification Access bien décommissionné</span>
+? ThisWorkbook.App.Repo.ConnectionType
+<span class="cm">→ "SQL_SERVER" ✅  (jamais "ACCESS")</span></pre>
+        </div>
+        <div style="background:rgba(229,57,53,0.06);border-left:3px solid #E53935;padding:0.6rem 0.8rem;border-radius:4px;margin-top:0.8rem;font-size:0.82rem">
+          <strong>⛔ Si Test 4 retourne une référence à Access :</strong> La migration n'est pas complète. Chercher dans VBA toutes les chaînes "accdb", "Access Driver", "DBQ=" et les remplacer par la chaîne SQL Server.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — TROUBLESHOOTING ══════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag red">Troubleshooting</span>
+      <h2>Problèmes fréquents &amp; solutions</h2>
+    </div>
+    <table class="fo-table">
+      <thead>
+        <tr><th>Erreur</th><th>Cause probable</th><th>Solution</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CreateObject("CommandoQuant.BlackScholesEngine") → Erreur 429</code></td>
+          <td>DLL C# non enregistrée comme serveur COM</td>
+          <td>Exécuter <code>register_dlls.bat</code> en Admin. Vérifier que la DLL est bien en Release (pas Debug). Vérifier que le .NET Framework 4.8 est installé.</td>
+        </tr>
+        <tr>
+          <td><code>xlwings.call(...) → ModuleNotFoundError</code></td>
+          <td>xlwings add-in non installé ou mauvais chemin Python</td>
+          <td>Vérifier <code>xlwings addin install</code>. Dans Excel → Options xlwings → configurer le chemin du venv Python. Redémarrer Excel.</td>
+        </tr>
+        <tr>
+          <td><code>ADODB.Connection → Login failed for user</code></td>
+          <td>Authentification SQL Server échouée (compte Windows sans accès)</td>
+          <td>Dans SSMS sur PERSO-AJE-DELL\BFASERVER01 : <code>CREATE LOGIN [DOMAINE\votrecompte] FROM WINDOWS;</code> puis <code>USE CommandoQuant; CREATE USER [DOMAINE\votrecompte] FOR LOGIN [DOMAINE\votrecompte]; ALTER ROLE db_datareader ADD MEMBER [DOMAINE\votrecompte];</code></td>
+        </tr>
+        <tr>
+          <td><code>pyodbc — Data source name not found</code></td>
+          <td>Driver ODBC SQL Server non installé</td>
+          <td>Télécharger "Microsoft ODBC Driver 17 for SQL Server" sur Microsoft. Relancer Python après installation.</td>
+        </tr>
+        <tr>
+          <td><code>Named Pipes Provider — could not open a connection</code></td>
+          <td>Service SQL Server arrêté ou nom de serveur incorrect</td>
+          <td>Vérifier dans services.msc que "SQL Server (BFASERVER01)" est Démarré. Vérifier le nom exact : <code>PERSO-AJE-DELL\BFASERVER01</code>. Activer TCP/IP dans SQL Server Configuration Manager.</td>
+        </tr>
+        <tr style="background:rgba(229,57,53,0.04)">
+          <td><code>Toute erreur mentionnant ".accdb" ou "Access Driver"</code></td>
+          <td>Code non migré — référence à Access residuelle</td>
+          <td>Chercher dans tout le code VBA et Python : "accdb", "Access Driver", "DBQ=", "Microsoft Access". Ces chaînes ne doivent plus exister. Remplacer par la chaîne SQL Server.</td>
+        </tr>
+        <tr>
+          <td><code>VolSurface.GetVol → Valeur 0 ou erreur</code></td>
+          <td>Surface de vol vide ou non chargée</td>
+          <td>Vérifier que la feuille "Vol Surface" contient des données. Relancer <code>CApp.Initialize()</code> pour recharger la surface. Vérifier le format des colonnes (Moneyness décimal, Maturity en années).</td>
+        </tr>
+        <tr>
+          <td>VaR Python retourne 0 pour toutes méthodes</td>
+          <td>Historique de cours manquant dans tbl_MarketData</td>
+          <td>Charger au minimum 260 jours de cours pour chaque sous-jacent. Vérifier que la colonne <code>DailyReturn</code> est calculée (non nulle). Tester avec <code>python var_calculator.py --test</code>.</td>
+        </tr>
+        <tr>
+          <td>Greeks tous à 0 dans le dashboard</td>
+          <td>tbl_Greeks vide ou jointure erronée</td>
+          <td>Vérifier qu'une position a bien été pricée. Dans SSMS sur PERSO-AJE-DELL\BFASERVER01 : <code>SELECT TOP 5 * FROM tbl_Greeks ORDER BY CalcDate DESC</code>. Le bouton "Pricer" doit insérer une ligne dans tbl_Greeks.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — VERSIONING ═══════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag teal">Versioning</span>
+      <h2>Roadmap &amp; Évolutions</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="card teal fade-up delay-1">
+        <div class="card-icon">✅</div>
+        <h3>V1 — Livrée</h3>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.8;padding-left:1rem">
+          <li>Options vanille EU/US (BS + Binomial)</li>
+          <li>Greeks analytiques (Δ Γ ν θ ρ)</li>
+          <li>VaR 3 méthodes (Python)</li>
+          <li>Surface de vol implicite (VB.net)</li>
+          <li>P&amp;L Attribution</li>
+          <li>Stress tests (scénarios prédéfinis)</li>
+          <li>Dashboard Greeks Excel</li>
+          <li><strong>Migration SQL Server PERSO-AJE-DELL\BFASERVER01 ✅</strong></li>
+          <li><strong>Access décommissionné ✅</strong></li>
+        </ul>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">🔧</div>
+        <h3>V2 — En cours</h3>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.8;padding-left:1rem">
+          <li>Options barrières (Monte Carlo C#)</li>
+          <li>Options asiatiques (approx. analytique)</li>
+          <li>Calibration surface de vol (Python scipy)</li>
+          <li>API REST C# pour pricing (ASP.NET)</li>
+          <li>Backtesting automatisé vs tbl_VaR historique</li>
+          <li>Stored procedures batch Greeks aggregation</li>
+          <li>Rapport réglementaire FRTB SA</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🚀</div>
+        <h3>V3 — Roadmap</h3>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.8;padding-left:1rem">
+          <li>Modèle Heston (stochastique vol)</li>
+          <li>CVA/DVA simplifié</li>
+          <li>Connexion Bloomberg (BDP Excel API)</li>
+          <li>Dashboard Power BI / web</li>
+          <li>Machine Learning pour calibration</li>
+          <li>Variance swaps complets</li>
+          <li>Reporting EMIR automatisé</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Runbook · Stack VBA · C# · VB.net · Python · SQL Server PERSO-AJE-DELL\BFASERVER01 · Access décommissionné</p>
+  <p style="margin-top:0.5rem">
+    <a href="index.html">Overview</a> ·
+    <a href="architecture.html">Architecture</a> ·
+    <a href="implementation.html">Implémentation</a> ·
+    <a href="features.html">Features</a>
+  </p>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

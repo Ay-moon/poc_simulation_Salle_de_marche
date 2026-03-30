@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Business — CommandoQuant Quant Equity Risk</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html" class="active">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>📈 Business — Dérivés Actions &amp; Risque de Marché</h1>
+  <p>Produits dérivés actions, modèles de pricing, Greeks, VaR et gestion du risque de marché equity</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Business</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 1 — PRODUITS ════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Produits</span>
+      <h2>Univers des dérivés actions traités</h2>
+      <p>CommandoQuant couvre les produits dérivés actions listés et OTC les plus courants dans un département de marché equity.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">📋</div>
+        <h3>Options Vanille Européennes</h3>
+        <p>Call et Put à exercice européen (à maturité uniquement). Sous-jacents : actions (TotalEnergies, LVMH, BNP…) ou indices (CAC 40, Eurostoxx 50). Modèle de référence : <strong>Black-Scholes</strong>.</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Prix = BS(S, K, r, σ, T, type)</li>
+          <li>Greeks analytiques (formules fermées)</li>
+          <li>Paramètre vol : implicite (marché) ou historique</li>
+        </ul>
+      </div>
+      <div class="card amber fade-up delay-2">
+        <div class="card-icon">🇺🇸</div>
+        <h3>Options Américaines</h3>
+        <p>Exercice possible à tout moment avant maturité. Pas de formule fermée en général : modélisation par <strong>arbre binomial CRR</strong> ou Longstaff-Schwartz Monte Carlo. Traitement des dividendes discrets.</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Arbre binomial Cox-Ross-Rubinstein</li>
+          <li>Correction dividendes (modèle Schroder)</li>
+          <li>Comparaison valeur intrinsèque vs continuation</li>
+        </ul>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">🚧</div>
+        <h3>Options à Barrière</h3>
+        <p>Options dont l'activation ou la désactivation dépend du franchissement d'un niveau barrière par le sous-jacent. Produits path-dependent : valorisation Monte Carlo.</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Knock-In (activée si barrière franchie)</li>
+          <li>Knock-Out (désactivée si barrière franchie)</li>
+          <li>Up-and-Out, Down-and-In, etc.</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📅</div>
+        <h3>Options Asiatiques</h3>
+        <p>Le payoff dépend de la <strong>moyenne</strong> du sous-jacent sur la durée de vie de l'option (Average Price Option). Moins coûteuse qu'une option vanille. Valorisation : approximation de Turnbull-Wakeman ou Monte Carlo.</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Average Price Call/Put</li>
+          <li>Average Strike Call/Put</li>
+          <li>Utilisées pour couvrir expositions sur prix moyen</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">📊</div>
+        <h3>Variance Swaps</h3>
+        <p>Échange de variance réalisée vs variance implicite. Payoff = Notional × (σ²<sub>réalisée</sub> − σ²<sub>strike</sub>). Instrument pur de trading de volatilité, sans sensibilité directionnelle (delta-neutre à l'initiation).</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Strike de variance (vol implicite au carré)</li>
+          <li>P&amp;L quotidien : variance réalisée vs strike</li>
+          <li>Vega long (long vol) ou court</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">📜</div>
+        <h3>Warrants &amp; Certificats</h3>
+        <p>Options émises par des banques ou des entreprises. Warrants d'action propre (dilution), warrants de couverture. Caractéristiques similaires aux options mais avec effet dilutif potentiel sur le capital.</p>
+        <ul style="font-size:0.85rem;color:var(--fo-muted);margin-top:1rem;line-height:1.8;padding-left:1rem">
+          <li>Modèle Black-Scholes ajusté (dilution)</li>
+          <li>Ratio d'exercice et conversion</li>
+          <li>Traitement comptable IFRS 9</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem">
+      <table class="fo-table">
+        <thead><tr><th>Produit</th><th>Modèle pricing</th><th>Greeks disponibles</th><th>Path-dependent</th><th>Complexité</th></tr></thead>
+        <tbody>
+          <tr><td>Option EU vanille</td><td>Black-Scholes</td><td>Δ Γ ν θ ρ (analytiques)</td><td>Non</td><td>⭐</td></tr>
+          <tr><td>Option US (Américaine)</td><td>Arbre binomial CRR</td><td>Δ Γ ν θ (numériques)</td><td>Non</td><td>⭐⭐</td></tr>
+          <tr><td>Option barrière</td><td>Monte Carlo / PDE</td><td>Δ Γ ν (numériques)</td><td>Oui</td><td>⭐⭐⭐</td></tr>
+          <tr><td>Option asiatique</td><td>Monte Carlo / approx. analytique</td><td>Δ ν θ (approx.)</td><td>Oui</td><td>⭐⭐⭐</td></tr>
+          <tr><td>Variance swap</td><td>Réplication statique</td><td>Vega, Vanna, Volga</td><td>Oui</td><td>⭐⭐⭐⭐</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — MODÈLE BLACK-SCHOLES ═════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Pricing</span>
+      <h2>Modèle Black-Scholes — Le fondement</h2>
+      <p>Formule centrale pour le pricing des options européennes. Base de référence pour tous les autres modèles.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Comment lire la formule Black-Scholes ?</strong><br/>
+          BS dépend de 5 paramètres : S (spot), K (strike), r (taux sans risque), σ (volatilité implicite), T (maturité). N() est la distribution normale cumulée. d1 et d2 sont des paramètres intermédiaires qui mesurent la probabilité risque-neutre que l'option soit dans la monnaie à maturité.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+flowchart LR
+  subgraph INPUTS["Paramètres d'entrée"]
+    direction TB
+    S["S = Spot\n(ex: 58.40€)"]
+    K["K = Strike\n(ex: 60.00€)"]
+    R["r = Taux\n(ex: 3.5%)"]
+    SIG["σ = Volatilité implicite\n(ex: 28%)"]
+    TT["T = Maturité\n(ex: 0.25 = 3 mois)"]
+  end
+
+  subgraph CALC["Calcul intermédiaire"]
+    direction TB
+    D1["d1 = [ln(S/K) + (r + σ²/2)T] / σ√T"]
+    D2["d2 = d1 − σ√T"]
+  end
+
+  subgraph OUTPUT["Prix + Greeks"]
+    direction TB
+    CALL["Call = S·N(d1) − K·e^{−rT}·N(d2)"]
+    DELTA["Δ = N(d1)"]
+    GAMMA["Γ = φ(d1) / (S·σ·√T)"]
+    VEGA["ν = S·φ(d1)·√T"]
+  end
+
+  INPUTS --> CALC --> OUTPUT
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:2rem">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📊</div>
+        <h3>Volatilité implicite</h3>
+        <p>La vol implicite est la vol qui, insérée dans BS, reproduit le prix de marché observé. Elle est inversée numériquement (Newton-Raphson). La <strong>surface de vol</strong> (vol par strike et maturité) capture le smile et la term structure.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">😊</div>
+        <h3>Smile de volatilité</h3>
+        <p>BS suppose σ constante → faux en pratique. Le marché prix une vol plus haute pour les options OTM (phénomène de skew/smile). CommandoQuant interpole la vol sur la surface par (K/S, T) pour obtenir la vol correcte à chaque option.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🎯</div>
+        <h3>Moneyness</h3>
+        <p>ATM (At-the-Money) : S ≈ K · e<sup>-rT</sup><br/>
+        ITM (In-the-Money) : Call avec S &gt; K<br/>
+        OTM (Out-of-the-Money) : Call avec S &lt; K<br/>
+        Le moneyness conditionne la sensibilité (Δ proche de 0.5 pour ATM, proche de 0 ou 1 sinon).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — GREEKS ════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">Greeks</span>
+      <h2>Les Greeks — Sensibilités du portefeuille</h2>
+      <p>Les Greeks mesurent la sensibilité du prix d'une option à chaque paramètre de marché. Outils essentiels du risk management et du delta hedging.</p>
+    </div>
+    <table class="fo-table fade-up">
+      <thead>
+        <tr>
+          <th>Greek</th>
+          <th>Symbole</th>
+          <th>Définition</th>
+          <th>Formule BS Call</th>
+          <th>Unité / Interprétation</th>
+          <th>Usage trading</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Delta</strong></td>
+          <td>Δ (delta)</td>
+          <td>∂V/∂S — sensibilité au spot</td>
+          <td>N(d1)</td>
+          <td>€/€ · [0, 1] pour Call EU</td>
+          <td>Delta hedging : acheter/vendre Δ×N actions pour neutraliser</td>
+        </tr>
+        <tr>
+          <td><strong>Gamma</strong></td>
+          <td>Γ (gamma)</td>
+          <td>∂²V/∂S² — convexité en spot</td>
+          <td>φ(d1)/(S·σ·√T)</td>
+          <td>€/€² — variation du delta</td>
+          <td>Gamma trading : gestion du rééquilibrage delta</td>
+        </tr>
+        <tr>
+          <td><strong>Vega</strong></td>
+          <td>ν (vega)</td>
+          <td>∂V/∂σ — sensibilité à la vol</td>
+          <td>S·φ(d1)·√T</td>
+          <td>€ / 1% de vol</td>
+          <td>Vega hedging : couvrir le risque de variation de vol implicite</td>
+        </tr>
+        <tr>
+          <td><strong>Theta</strong></td>
+          <td>θ (theta)</td>
+          <td>∂V/∂t — dégradation temporelle</td>
+          <td>-(S·φ(d1)·σ)/(2√T) - r·K·e<sup>-rT</sup>·N(d2)</td>
+          <td>€/jour (négatif pour buyer)</td>
+          <td>Gestion du carry : options longues perdent de la valeur temps</td>
+        </tr>
+        <tr>
+          <td><strong>Rho</strong></td>
+          <td>ρ (rho)</td>
+          <td>∂V/∂r — sensibilité aux taux</td>
+          <td>K·T·e<sup>-rT</sup>·N(d2)</td>
+          <td>€ / 1% de taux</td>
+          <td>Couverture taux sur options longue maturité</td>
+        </tr>
+        <tr>
+          <td><strong>Vanna</strong></td>
+          <td>∂Δ/∂σ</td>
+          <td>Cross-sensibilité spot/vol</td>
+          <td>-φ(d1)·d2/σ</td>
+          <td>Δ / 1% de vol</td>
+          <td>Correction du delta lors d'un choc de vol (risk reversal)</td>
+        </tr>
+        <tr>
+          <td><strong>Volga</strong></td>
+          <td>∂ν/∂σ</td>
+          <td>Convexité en volatilité</td>
+          <td>ν·d1·d2/σ</td>
+          <td>€ / (1%)²</td>
+          <td>Gestion du smile : impact des mouvements de vol sur le vega</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" style="margin-top:1.5rem">
+      <strong>Delta Hedging dynamique :</strong> Pour une position Long Call Δ=0.52 sur 1000 actions, le trader vend 520 actions pour neutraliser le delta. Lorsque le spot monte et que Δ passe à 0.58, il vend 60 actions supplémentaires. Le <strong>Gamma</strong> mesure ce besoin de rééquilibrage : Γ élevé = rééquilibrage fréquent = coûts de transaction importants.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — VAR ET RISQUE ════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag teal">Risk</span>
+      <h2>Value at Risk — 3 méthodes implémentées</h2>
+      <p>La VaR mesure la perte maximale attendue à un niveau de confiance donné sur un horizon donné. Trois approches sont disponibles selon la complexité du portefeuille.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Comprendre la VaR simplement</strong><br/>
+          VaR 1j 99% = 125 000€ signifie : "Il y a 99% de chances que la perte sur 1 jour ne dépasse pas 125 000€." La VaR ne dit pas ce qui se passe dans les 1% de cas extrêmes — c'est le rôle des stress tests et de la CVaR (Conditional VaR = Expected Shortfall).
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+flowchart TB
+  subgraph PARAM["1. VaR Paramétrique (variance-covariance)"]
+    P1["Hypothèse : rendements normaux\nMatrice de corrélation ΣΣ\nVaR = z(99%) × σ_portfolio × √T\n⚡ Rapide · ❌ Non-linéarités ignorées"]
+  end
+
+  subgraph HIST["2. VaR Historique (simulation historique)"]
+    H1["250 scénarios P&L historiques\nRetrier les P&L → percentile 1%\nVaR = perte au 2,5ème pire jour\n✅ Capture fat tails · ❌ Dépend de l'historique"]
+  end
+
+  subgraph MC["3. Monte Carlo (simulation stochastique)"]
+    MC1["10 000 trajectoires aléatoires\ndS = μS dt + σS dW (GBM)\nP&L de chaque scénario → distribution\n✅ Flexible · ✅ Produits complexes · ⏱ Plus lent"]
+  end
+
+  PARAM --- HIST --- MC
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:2rem">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📐</div>
+        <h3>VaR Paramétrique</h3>
+        <p>Implémentée en <strong>C#/VB.net</strong> avec matrice de covariance construite depuis l'historique 250j. Utilise les Greeks (delta normal) pour approximer la P&L. Méthode réglementaire standard (approche interne standardisée).</p>
+        <p style="font-size:0.82rem;color:var(--fo-muted);margin-top:0.5rem">VaR = z × σ_Δ × √T avec σ_Δ = √(Δᵀ·Σ·Δ)</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">📈</div>
+        <h3>VaR Historique</h3>
+        <p>Implémentée en <strong>Python (Pandas)</strong>. Lit 250 jours d'historique de cours et vol depuis SQL. Applique les variations historiques à la position courante. Percentile 1% de la distribution des P&L simulés.</p>
+        <p style="font-size:0.82rem;color:var(--fo-muted);margin-top:0.5rem">P&L_i = Σ Δ_k × ΔS_k,i + ½ Γ_k × (ΔS_k,i)²</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🎲</div>
+        <h3>Monte Carlo VaR</h3>
+        <p>Implémentée en <strong>Python (NumPy)</strong>. 10 000 simulations GBM corrélées. Repricing complet de chaque option pour chaque scénario. Méthode de référence pour les produits exotiques et path-dependent.</p>
+        <p style="font-size:0.82rem;color:var(--fo-muted);margin-top:0.5rem">dS = r·S·dt + σ·S·√dt·ε, ε~N(0,1)</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 5 — P&L ATTRIBUTION ══════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag green">P&amp;L</span>
+      <h2>P&amp;L Attribution — Décomposition des gains et pertes</h2>
+      <p>L'attribution P&amp;L explique d'où vient le P&amp;L quotidien : chaque source de risque contribue distinctement.</p>
+    </div>
+    <table class="fo-table fade-up">
+      <thead>
+        <tr>
+          <th>Composante P&amp;L</th>
+          <th>Formule</th>
+          <th>Exemple (1 jour)</th>
+          <th>Greek source</th>
+          <th>Implémentation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Delta P&amp;L</strong></td>
+          <td>Δ × ΔS</td>
+          <td>+0.52 × (+1.20€) = +0.62€</td>
+          <td>Delta</td>
+          <td><code>CGreeks.DeltaPnL(deltaS)</code></td>
+        </tr>
+        <tr>
+          <td><strong>Gamma P&amp;L</strong></td>
+          <td>½ × Γ × (ΔS)²</td>
+          <td>½ × 0.08 × (1.20)² = +0.06€</td>
+          <td>Gamma</td>
+          <td><code>CGreeks.GammaPnL(deltaS)</code></td>
+        </tr>
+        <tr>
+          <td><strong>Vega P&amp;L</strong></td>
+          <td>ν × Δσ</td>
+          <td>0.18 × (+0.5%) = +0.09€</td>
+          <td>Vega</td>
+          <td><code>CGreeks.VegaPnL(deltaVol)</code></td>
+        </tr>
+        <tr>
+          <td><strong>Theta P&amp;L</strong></td>
+          <td>θ × Δt</td>
+          <td>−0.02 × 1j = −0.02€</td>
+          <td>Theta</td>
+          <td><code>CGreeks.ThetaPnL(dt)</code></td>
+        </tr>
+        <tr>
+          <td><strong>Rho P&amp;L</strong></td>
+          <td>ρ × Δr</td>
+          <td>+0.05 × (+0.01%) ≈ 0€</td>
+          <td>Rho</td>
+          <td><code>CGreeks.RhoPnL(deltaR)</code></td>
+        </tr>
+        <tr>
+          <td><strong>Résidu inexpliqué</strong></td>
+          <td>P&amp;L réel − Σ Greeks P&amp;L</td>
+          <td>±0.01€ (erreur numérique)</td>
+          <td>–</td>
+          <td>Contrôle qualité modèle</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout green" style="margin-top:1.5rem">
+      <strong>Réconciliation P&amp;L :</strong> Le P&amp;L théorique (calculé via Greeks) doit être réconcilié avec le P&amp;L réel (différence de valorisation mark-to-market). Un résidu important signale une erreur de données de marché ou un modèle inadapté. CommandoQuant génère un rapport de réconciliation quotidien.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 6 — STRESS TESTS ═════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag red">Stress</span>
+      <h2>Stress Tests — Au-delà de la VaR</h2>
+      <p>Les stress tests simulent des scénarios de crise qui ne sont pas capturés par la VaR (tail risk). Obligatoires sous FRTB et recommandés par le Comité de Bâle.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card red fade-up delay-1">
+        <div class="card-icon">📉</div>
+        <h3>Choc Spot</h3>
+        <p>Simulation d'un krach boursier brutal. Impact sur le book selon les Deltas et Gammas.<br/><br/>
+        <strong>Scénario type :</strong><br/>
+        Spot −20% (1987-style crash) : P&amp;L = Δ×(−20%)×S + ½×Γ×(20%×S)²<br/><br/>
+        <strong>Mise en œuvre Python :</strong> <code>stress.apply_shock(spot_shock=-0.20)</code></p>
+      </div>
+      <div class="card red fade-up delay-2">
+        <div class="card-icon">🌡️</div>
+        <h3>Choc Volatilité</h3>
+        <p>Explosion de la volatilité implicite (type mars 2020 Covid). Impact principalement via Vega et Vanna.<br/><br/>
+        <strong>Scénario type :</strong><br/>
+        Vol +30 pts (de 25% à 55%) : P&amp;L = ν × 0.30<br/><br/>
+        <strong>Mise en œuvre :</strong> Reprice toutes les options avec la nouvelle surface de vol.</p>
+      </div>
+      <div class="card red fade-up delay-3">
+        <div class="card-icon">📊</div>
+        <h3>Scénarios Historiques</h3>
+        <p>Replay des crises passées sur le book actuel.<br/><br/>
+        <strong>Crises référencées :</strong><br/>
+        • Black Monday 1987 (−22% spot)<br/>
+        • Crise asiatique 1997<br/>
+        • Dot-com 2001, Lehman 2008<br/>
+        • Covid mars 2020<br/><br/>
+        Calcul via Python : application des returns historiques à S et σ.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Business Domain · Dérivés Actions · Greeks · VaR · Stress Testing</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="workflow.html">Workflow</a> · <a href="implementation.html">Implémentation</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

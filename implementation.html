@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Implémentation — CommandoQuant Multi-Stack</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html" class="active">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>💻 Implémentation — Code Multi-Langage</h1>
+  <p>VBA (UI + orchestration) · C# (pricing engine) · VB.net (vol surface) · Python (VaR + stress) · SQL (procédures)</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Implémentation</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 0 — STRATÉGIE MULTI-LANGAGE ══════════════════ -->
+<section class="section" style="background:linear-gradient(135deg,#0B1426,#0D2040);color:var(--fo-white)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Stratégie</span>
+      <h2 style="color:var(--fo-white)">Chaque langage à sa place</h2>
+      <p style="color:#90A4AE">Le choix du langage est dicté par les contraintes réelles d'un projet quant en banque.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card dark fade-up delay-1">
+        <div class="card-icon">📗</div>
+        <h3>Excel VBA — Orchestration &amp; UI</h3>
+        <p>Colle l'ensemble. Appelle les DLL .NET via COM Interop, lance Python via xlwings, lit/écrit Access/SQL via ADODB. Les traders vivent dans Excel — le VBA est l'interface naturelle.</p>
+      </div>
+      <div class="card dark fade-up delay-2">
+        <div class="card-icon">🔷</div>
+        <h3>C# — Moteur de pricing</h3>
+        <p>Performance et typage fort. Black-Scholes, Binomial, Monte Carlo. Parallel.For pour le MC. Compilé en DLL COM-visible, appelé depuis VBA et Python. Zéro dépendance : calcul purement algorithmique.</p>
+      </div>
+      <div class="card dark fade-up delay-3">
+        <div class="card-icon">🐍</div>
+        <h3>Python — Analytics &amp; VaR</h3>
+        <p>NumPy/SciPy/Pandas pour les calculs vectorisés. Monte Carlo VaR, backtesting, calibration de la surface de vol. xlwings pour l'intégration Excel. Jupyter pour l'exploration.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 1 — VBA COption ══════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag amber">VBA — Classe Domain</span>
+      <h2>COption — L'entité option</h2>
+      <p>Responsabilité unique : représenter une option avec ses paramètres contractuels. Aucune logique de pricing.</p>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">VBA</span><span class="code-file">COption.cls</span></div>
+          <pre><span class="kw">Option Explicit</span>
+
+<span class="cm">' === PRIVATE FIELDS ===</span>
+<span class="kw">Private</span> <span class="nm">m_positionId</span>   <span class="kw">As String</span>
+<span class="kw">Private</span> <span class="nm">m_underlying</span>   <span class="kw">As String</span>
+<span class="kw">Private</span> <span class="nm">m_optionType</span>   <span class="kw">As String</span>   <span class="cm">' "CALL" ou "PUT"</span>
+<span class="kw">Private</span> <span class="nm">m_style</span>        <span class="kw">As String</span>   <span class="cm">' "EU" ou "US"</span>
+<span class="kw">Private</span> <span class="nm">m_strike</span>       <span class="kw">As Double</span>
+<span class="kw">Private</span> <span class="nm">m_maturity</span>     <span class="kw">As Date</span>
+<span class="kw">Private</span> <span class="nm">m_notional</span>     <span class="kw">As Long</span>
+<span class="kw">Private</span> <span class="nm">m_buySell</span>      <span class="kw">As String</span>   <span class="cm">' "BUY" ou "SELL"</span>
+<span class="kw">Private</span> <span class="nm">m_state</span>        <span class="kw">As String</span>
+
+<span class="cm">' === LIFECYCLE ===</span>
+<span class="kw">Private Sub</span> <span class="fn">Class_Initialize</span>()
+    <span class="nm">m_state</span>  = "SAISI"
+    <span class="nm">m_style</span>  = "EU"
+    <span class="nm">m_buySell</span> = "BUY"
+<span class="kw">End Sub</span>
+
+<span class="cm">' === COMPUTED PROPERTIES ===</span>
+<span class="kw">Public Property Get</span> <span class="fn">Maturity_Years</span>() <span class="kw">As Double</span>
+    <span class="cm">' T en fractions d'année (base Act/365)</span>
+    <span class="fn">Maturity_Years</span> = (<span class="nm">m_maturity</span> - Date) / 365#
+<span class="kw">End Property</span>
+
+<span class="kw">Public Property Get</span> <span class="fn">IsCall</span>() <span class="kw">As Boolean</span>
+    <span class="fn">IsCall</span> = (<span class="nm">m_optionType</span> = "CALL")
+<span class="kw">End Property</span>
+
+<span class="kw">Public Property Get</span> <span class="fn">IsExpired</span>() <span class="kw">As Boolean</span>
+    <span class="fn">IsExpired</span> = (<span class="nm">m_maturity</span> &lt; Date)
+<span class="kw">End Property</span>
+
+<span class="kw">Public Property Get</span> <span class="fn">SignedNotional</span>() <span class="kw">As Long</span>
+    <span class="cm">' BUY → +N, SELL → −N</span>
+    <span class="kw">If</span> <span class="nm">m_buySell</span> = "BUY" <span class="kw">Then</span>
+        <span class="fn">SignedNotional</span> = <span class="nm">m_notional</span>
+    <span class="kw">Else</span>
+        <span class="fn">SignedNotional</span> = -<span class="nm">m_notional</span>
+    <span class="kw">End If</span>
+<span class="kw">End Property</span>
+
+<span class="cm">' === Property Get/Let standard ===</span>
+<span class="kw">Public Property Get</span> <span class="fn">Strike</span>() <span class="kw">As Double</span>
+    <span class="fn">Strike</span> = <span class="nm">m_strike</span>
+<span class="kw">End Property</span>
+<span class="kw">Public Property Let</span> <span class="fn">Strike</span>(<span class="nm">v</span> <span class="kw">As Double</span>)
+    <span class="kw">If</span> <span class="nm">v</span> &lt;= 0 <span class="kw">Then</span>
+        <span class="kw">Err.Raise</span> vbObjectError + 201, "COption.Strike", _
+            "Strike must be positive"
+    <span class="kw">End If</span>
+    <span class="nm">m_strike</span> = <span class="nm">v</span>
+<span class="kw">End Property</span></pre>
+        </div>
+      </div>
+      <div>
+        <div class="callout" style="margin-bottom:1rem">
+          <strong>Responsabilités de COption :</strong><br/>
+          ✅ Stocker les paramètres contractuels de l'option<br/>
+          ✅ Calculer les propriétés dérivées simples (T en années, IsCall…)<br/>
+          ✅ Valider les paramètres à l'assignment (guard clauses)<br/>
+          ❌ Ne jamais appeler le pricing engine<br/>
+          ❌ Ne jamais lire/écrire la base de données<br/>
+          ❌ Ne jamais modifier son propre état workflow
+        </div>
+        <div class="callout blue">
+          <strong>Interop avec C# :</strong><br/>
+          <code>COption</code> est sérialisée en tableau de variants pour passer au moteur COM C# :<br/>
+          <code>arr = Array(underlying, strike, T, optionType, style)</code><br/>
+          La DLL C# reçoit ces primitives et construit son propre <code>OptionParams</code> struct.
+        </div>
+        <div class="callout green" style="margin-top:1rem">
+          <strong>Test Immediate Window :</strong><br/>
+          <code>Dim o As New COption</code><br/>
+          <code>o.Strike = -5</code> → Err 9201 levée ✅<br/>
+          <code>o.Maturity = DateAdd("m", 3, Date)</code> → OK<br/>
+          <code>Debug.Print o.Maturity_Years</code> → 0.25 ✅
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — C# BLACK-SCHOLES ═════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">C# — Pricing Engine</span>
+      <h2>BlackScholesEngine — Moteur de pricing</h2>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">C#</span><span class="code-file">BlackScholesEngine.cs — DLL COM-visible</span></div>
+      <pre style="padding:1.2rem 1.5rem;font-family:var(--font-mono);font-size:0.83rem;color:#E0E0E0;line-height:1.7;background:#1E2A3A;border-radius:0 0 10px 10px;overflow-x:auto"><span class="kw">using</span> System;
+<span class="kw">using</span> System.Runtime.InteropServices;
+
+[ComVisible(<span class="kw">true</span>)]
+[Guid(<span class="st">"A1B2C3D4-E5F6-7890-ABCD-EF1234567890"</span>)]
+[ClassInterface(ClassInterfaceType.None)]
+<span class="kw">public class</span> <span class="tp">BlackScholesEngine</span> : <span class="tp">IPricingEngine</span>
+{
+    <span class="cm">// ── Pricing EU option (Call ou Put) ──────────────────────</span>
+    <span class="kw">public double</span> <span class="fn">Price</span>(<span class="kw">double</span> S, <span class="kw">double</span> K, <span class="kw">double</span> r,
+                         <span class="kw">double</span> sigma, <span class="kw">double</span> T, <span class="kw">string</span> optType)
+    {
+        <span class="kw">double</span> d1 = (Math.Log(S / K) + (r + sigma * sigma / 2) * T)
+                    / (sigma * Math.Sqrt(T));
+        <span class="kw">double</span> d2 = d1 - sigma * Math.Sqrt(T);
+
+        <span class="kw">return</span> optType.ToUpper() == <span class="st">"CALL"</span>
+            ? S * N(d1) - K * Math.Exp(-r * T) * N(d2)
+            : K * Math.Exp(-r * T) * N(-d2) - S * N(-d1);
+    }
+
+    <span class="cm">// ── Greeks analytiques (formules fermées) ────────────────</span>
+    <span class="kw">public double</span>[] <span class="fn">Greeks</span>(<span class="kw">double</span> S, <span class="kw">double</span> K, <span class="kw">double</span> r,
+                            <span class="kw">double</span> sigma, <span class="kw">double</span> T, <span class="kw">string</span> optType)
+    {
+        <span class="kw">double</span> d1 = (Math.Log(S / K) + (r + sigma * sigma / 2) * T)
+                    / (sigma * Math.Sqrt(T));
+        <span class="kw">double</span> d2 = d1 - sigma * Math.Sqrt(T);
+        <span class="kw">bool</span> isCall = optType.ToUpper() == <span class="st">"CALL"</span>;
+
+        <span class="kw">double</span> delta = isCall ? N(d1) : N(d1) - 1.0;
+        <span class="kw">double</span> gamma = Phi(d1) / (S * sigma * Math.Sqrt(T));
+        <span class="kw">double</span> vega  = S * Phi(d1) * Math.Sqrt(T) / 100.0; <span class="cm">// par 1%</span>
+        <span class="kw">double</span> theta = isCall
+            ? -(S * Phi(d1) * sigma) / (2 * Math.Sqrt(T))
+              - r * K * Math.Exp(-r * T) * N(d2)
+            : -(S * Phi(d1) * sigma) / (2 * Math.Sqrt(T))
+              + r * K * Math.Exp(-r * T) * N(-d2);
+        theta /= 365.0; <span class="cm">// par jour calendaire</span>
+        <span class="kw">double</span> rho = isCall
+            ? K * T * Math.Exp(-r * T) * N(d2) / 100.0
+            : -K * T * Math.Exp(-r * T) * N(-d2) / 100.0;
+
+        <span class="kw">return new double</span>[] { delta, gamma, vega, theta, rho };
+    }
+
+    <span class="cm">// ── Vol implicite par Newton-Raphson ─────────────────────</span>
+    <span class="kw">public double</span> <span class="fn">ImpliedVol</span>(<span class="kw">double</span> marketPrice, <span class="kw">double</span> S,
+                              <span class="kw">double</span> K, <span class="kw">double</span> r, <span class="kw">double</span> T,
+                              <span class="kw">string</span> optType, <span class="kw">int</span> maxIter = 100)
+    {
+        <span class="kw">double</span> sigma = 0.20; <span class="cm">// point de départ</span>
+        <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; maxIter; i++)
+        {
+            <span class="kw">double</span> price = Price(S, K, r, sigma, T, optType);
+            <span class="kw">double</span> vega  = Greeks(S, K, r, sigma, T, optType)[2] * 100;
+            <span class="kw">if</span> (Math.Abs(vega) &lt; 1e-10) <span class="kw">break</span>;
+            sigma -= (price - marketPrice) / vega;
+            <span class="kw">if</span> (Math.Abs(price - marketPrice) &lt; 1e-8) <span class="kw">break</span>;
+        }
+        <span class="kw">return</span> sigma;
+    }
+
+    <span class="cm">// ── Helpers ──────────────────────────────────────────────</span>
+    <span class="kw">private double</span> <span class="fn">N</span>(<span class="kw">double</span> x) => <span class="cm">/* N cumulatif normal */</span>
+        0.5 * (1 + MathNet.Numerics.SpecialFunctions.Erf(x / Math.Sqrt(2)));
+    <span class="kw">private double</span> <span class="fn">Phi</span>(<span class="kw">double</span> x) =>
+        Math.Exp(-0.5 * x * x) / Math.Sqrt(2 * Math.PI);
+}</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — VB.NET VOL SURFACE ══════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">VB.net — Vol Surface</span>
+      <h2>VolSurface — Interpolation de la surface de vol</h2>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">VB.NET</span><span class="code-file">VolSurface.vb</span></div>
+      <pre style="padding:1.2rem 1.5rem;font-family:var(--font-mono);font-size:0.83rem;color:#E0E0E0;line-height:1.7;background:#1E2A3A;border-radius:0 0 10px 10px;overflow-x:auto"><span class="kw">Public Class</span> <span class="tp">VolSurface</span>
+
+    <span class="cm">' Surface stockée : (moneyness, maturity) → impliedVol</span>
+    <span class="kw">Private</span> <span class="nm">_grid</span> <span class="kw">As</span> Dictionary(<span class="kw">Of</span> (<span class="kw">Double</span>, <span class="kw">Double</span>), <span class="kw">Double</span>)
+    <span class="kw">Private</span> <span class="nm">_moneynessGrid</span> <span class="kw">As Double</span>()
+    <span class="kw">Private</span> <span class="nm">_maturityGrid</span>  <span class="kw">As Double</span>()
+
+    <span class="cm">''' &lt;summary&gt;Charge la surface depuis un array 2D&lt;/summary&gt;</span>
+    <span class="kw">Public Sub</span> <span class="fn">LoadFromArray</span>(<span class="nm">data</span>(,) <span class="kw">As Object</span>)
+        <span class="nm">_grid</span> = <span class="kw">New</span> Dictionary(<span class="kw">Of</span> (<span class="kw">Double</span>, <span class="kw">Double</span>), <span class="kw">Double</span>)
+        <span class="kw">For</span> <span class="nm">i</span> <span class="kw">As Integer</span> = 1 <span class="kw">To</span> <span class="nm">data</span>.GetUpperBound(0)
+            <span class="kw">Dim</span> <span class="nm">m</span> = CDbl(<span class="nm">data</span>(<span class="nm">i</span>, 1)) <span class="cm">' moneyness = K/F</span>
+            <span class="kw">Dim</span> <span class="nm">t</span> = CDbl(<span class="nm">data</span>(<span class="nm">i</span>, 2)) <span class="cm">' maturity en années</span>
+            <span class="kw">Dim</span> <span class="nm">v</span> = CDbl(<span class="nm">data</span>(<span class="nm">i</span>, 3)) <span class="cm">' vol implicite</span>
+            <span class="nm">_grid</span>((<span class="nm">m</span>, <span class="nm">t</span>)) = <span class="nm">v</span>
+        <span class="kw">Next</span>
+    <span class="kw">End Sub</span>
+
+    <span class="cm">''' &lt;summary&gt;Interpolation bilinéaire sur (moneyness, T)&lt;/summary&gt;</span>
+    <span class="kw">Public Function</span> <span class="fn">GetVol</span>(<span class="nm">spot</span> <span class="kw">As Double</span>, <span class="nm">strike</span> <span class="kw">As Double</span>,
+                            <span class="nm">T</span> <span class="kw">As Double</span>) <span class="kw">As Double</span>
+
+        <span class="kw">Dim</span> <span class="nm">moneyness</span> = strike / spot <span class="cm">' K/S (approx K/F)</span>
+
+        <span class="cm">' Trouver les 4 points encadrants dans la grille</span>
+        <span class="kw">Dim</span> <span class="nm">m_low</span> = <span class="fn">FloorMatch</span>(<span class="nm">_moneynessGrid</span>, <span class="nm">moneyness</span>)
+        <span class="kw">Dim</span> <span class="nm">m_hi</span>  = <span class="fn">CeilMatch</span>(<span class="nm">_moneynessGrid</span>, <span class="nm">moneyness</span>)
+        <span class="kw">Dim</span> <span class="nm">t_low</span> = <span class="fn">FloorMatch</span>(<span class="nm">_maturityGrid</span>, <span class="nm">T</span>)
+        <span class="kw">Dim</span> <span class="nm">t_hi</span>  = <span class="fn">CeilMatch</span>(<span class="nm">_maturityGrid</span>, <span class="nm">T</span>)
+
+        <span class="cm">' Interpolation bilinéaire</span>
+        <span class="kw">Dim</span> <span class="nm">v00</span> = <span class="nm">_grid</span>((<span class="nm">m_low</span>, <span class="nm">t_low</span>))
+        <span class="kw">Dim</span> <span class="nm">v10</span> = <span class="nm">_grid</span>((<span class="nm">m_hi</span>,  <span class="nm">t_low</span>))
+        <span class="kw">Dim</span> <span class="nm">v01</span> = <span class="nm">_grid</span>((<span class="nm">m_low</span>, <span class="nm">t_hi</span>))
+        <span class="kw">Dim</span> <span class="nm">v11</span> = <span class="nm">_grid</span>((<span class="nm">m_hi</span>,  <span class="nm">t_hi</span>))
+
+        <span class="kw">Dim</span> <span class="nm">wm</span> = <span class="kw">If</span>(<span class="nm">m_hi</span> = <span class="nm">m_low</span>, 0.5, (<span class="nm">moneyness</span>-<span class="nm">m_low</span>)/(<span class="nm">m_hi</span>-<span class="nm">m_low</span>))
+        <span class="kw">Dim</span> <span class="nm">wt</span> = <span class="kw">If</span>(<span class="nm">t_hi</span> = <span class="nm">t_low</span>, 0.5, (<span class="nm">T</span>-<span class="nm">t_low</span>)/(<span class="nm">t_hi</span>-<span class="nm">t_low</span>))
+
+        <span class="kw">Return</span> (<span class="nm">v00</span> * (1-<span class="nm">wm</span>) + <span class="nm">v10</span>*<span class="nm">wm</span>) * (1-<span class="nm">wt</span>) +
+               (<span class="nm">v01</span> * (1-<span class="nm">wm</span>) + <span class="nm">v11</span>*<span class="nm">wm</span>) * <span class="nm">wt</span>
+    <span class="kw">End Function</span>
+
+<span class="kw">End Class</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — PYTHON VAR ═══════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag green">Python — VaR Calculator</span>
+      <h2>VaRCalculator — Monte Carlo &amp; VaR historique</h2>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Python</span><span class="code-file">var_calculator.py — xlwings UDF server</span></div>
+      <pre style="padding:1.2rem 1.5rem;font-family:var(--font-mono);font-size:0.83rem;color:#E0E0E0;line-height:1.7;background:#1E2A3A;border-radius:0 0 10px 10px;overflow-x:auto"><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> sqlalchemy <span class="kw">as</span> sa
+<span class="kw">import</span> xlwings <span class="kw">as</span> xw
+
+<span class="kw">@xw.func</span>
+<span class="kw">def</span> <span class="fn">var_run</span>(book_id: str, confidence: float = 0.99,
+            horizon: int = 1, n_simul: int = 10_000) <span class="kw">-></span> dict:
+    <span class="st">"""
+    Calcule VaR 1j 99% pour un book de positions options.
+    Appelé depuis VBA via xlwings.call("var_calculator", "var_run", book_id)
+    """</span>
+    <span class="cm"># 1. Charger les positions et Greeks depuis SQL</span>
+    engine = sa.create_engine(<span class="fn">get_connection_string</span>())
+    positions = pd.read_sql(
+        <span class="st">f"SELECT * FROM tbl_Positions WHERE BookId = '{book_id}'"</span>,
+        engine
+    )
+    greeks = pd.read_sql(
+        <span class="st">f"""SELECT p.PositionId, g.Delta, g.Gamma, g.Vega, g.Spot
+             FROM tbl_Greeks g JOIN tbl_Positions p ON g.PositionId = p.PositionId
+             WHERE p.BookId = '{book_id}' AND g.CalcDate = CAST(GETDATE() AS DATE)"""</span>,
+        engine
+    )
+
+    <span class="cm"># 2. Historique 250j de rendements</span>
+    returns = pd.read_sql(
+        <span class="st">"""SELECT UnderlyingId, TradeDate, DailyReturn
+           FROM tbl_MarketData WHERE TradeDate >= DATEADD(d,-252,GETDATE())"""</span>,
+        engine
+    ).pivot(index=<span class="st">'TradeDate'</span>, columns=<span class="st">'UnderlyingId'</span>, values=<span class="st">'DailyReturn'</span>)
+
+    <span class="cm"># 3. VaR Historique — application des rendements historiques</span>
+    hist_pnl = <span class="fn">_historical_var</span>(greeks, returns)
+    var_hist = np.percentile(hist_pnl, (1 - confidence) * 100)
+
+    <span class="cm"># 4. VaR Monte Carlo — simulation GBM corrélée</span>
+    sigma = returns.std().values
+    corr  = returns.corr().values
+    var_mc, es_mc = <span class="fn">_monte_carlo_var</span>(greeks, sigma, corr, n_simul, confidence)
+
+    <span class="cm"># 5. VaR Paramétrique (delta-normal)</span>
+    cov_matrix = np.outer(sigma, sigma) * corr
+    delta_vec  = greeks[<span class="st">'Delta'</span>].values * greeks[<span class="st">'Spot'</span>].values
+    port_sigma = np.sqrt(delta_vec @ cov_matrix @ delta_vec)
+    var_param  = np.percentile(np.random.normal(0, 1, 100000), (1-confidence)*100) * port_sigma * np.sqrt(horizon)
+
+    <span class="kw">return</span> {
+        <span class="st">"var_parametric"</span>: <span class="nb">round</span>(-var_param * <span class="fn">_book_notional</span>(positions), 2),
+        <span class="st">"var_historical"</span>: <span class="nb">round</span>(-var_hist, 2),
+        <span class="st">"var_mc"</span>:         <span class="nb">round</span>(-var_mc, 2),
+        <span class="st">"es_99"</span>:          <span class="nb">round</span>(-es_mc, 2),
+        <span class="st">"confidence"</span>:     confidence,
+        <span class="st">"n_simulations"</span>:  n_simul
+    }
+
+
+<span class="kw">def</span> <span class="fn">_monte_carlo_var</span>(greeks, sigma, corr, n_simul, confidence):
+    <span class="st">"""Monte Carlo VaR : P&L = Δ·ΔS + ½Γ·ΔS²"""</span>
+    L = np.linalg.cholesky(corr)
+    Z = np.random.randn(n_simul, <span class="nb">len</span>(sigma))
+    corr_Z   = Z @ L.T
+    delta_S  = sigma * corr_Z          <span class="cm"># ΔS/S normalisé</span>
+    spot_chg = delta_S * greeks[<span class="st">'Spot'</span>].values
+
+    pnl = (greeks[<span class="st">'Delta'</span>].values * spot_chg
+           + 0.5 * greeks[<span class="st">'Gamma'</span>].values * spot_chg**2).sum(axis=1)
+
+    var = np.percentile(pnl, (1 - confidence) * 100)
+    es  = pnl[pnl &lt;= var].mean()
+    <span class="kw">return</span> var, es</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 5 — VBA COMPOSITION ROOT ════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag purple">VBA — Composition Root</span>
+      <h2>CApp — L'orchestrateur multi-stack</h2>
+    </div>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">VBA</span><span class="code-file">CApp.cls — Composition Root</span></div>
+      <pre><span class="kw">Option Explicit</span>
+
+<span class="kw">Private</span> <span class="nm">m_config</span>    <span class="kw">As</span> <span class="tp">CConfig</span>
+<span class="kw">Private</span> <span class="nm">m_logger</span>    <span class="kw">As</span> <span class="tp">CLogger</span>
+<span class="kw">Private</span> <span class="nm">m_pricingDll</span> <span class="kw">As Object</span>  <span class="cm">' COM : BlackScholesEngine C#</span>
+<span class="kw">Private</span> <span class="nm">m_volSurface</span> <span class="kw">As Object</span>  <span class="cm">' COM : VolSurface VB.net</span>
+<span class="kw">Private</span> <span class="nm">m_repo</span>       <span class="kw">As</span> <span class="tp">CAccessRepository</span>
+<span class="kw">Private</span> <span class="nm">m_workflow</span>   <span class="kw">As</span> <span class="tp">CWorkflowEngine</span>
+<span class="kw">Private</span> <span class="nm">m_cache</span>      <span class="kw">As</span> <span class="tp">CPositionCache</span>
+
+<span class="kw">Public Sub</span> <span class="fn">Initialize</span>()
+    <span class="kw">On Error GoTo</span> ErrHandler
+
+    <span class="cm">' 1. Infrastructure</span>
+    <span class="kw">Set</span> <span class="nm">m_config</span> = <span class="kw">New</span> <span class="tp">CConfig</span>
+    <span class="nm">m_config</span>.LoadFromTable ThisWorkbook.Sheets("Config") _
+                            .ListObjects("tbl_Config")
+
+    <span class="kw">Set</span> <span class="nm">m_logger</span> = <span class="kw">New</span> <span class="tp">CLogger</span>
+    <span class="nm">m_logger</span>.Initialize <span class="nm">m_config</span>
+
+    <span class="cm">' 2. Pricing Engine COM (.NET DLL enregistrée)</span>
+    <span class="kw">Set</span> <span class="nm">m_pricingDll</span> = CreateObject(<span class="st">"CommandoQuant.BlackScholesEngine"</span>)
+    <span class="nm">m_logger</span>.Info "BlackScholesEngine COM loaded ✅"
+
+    <span class="cm">' 3. Vol Surface (VB.net DLL)</span>
+    <span class="kw">Set</span> <span class="nm">m_volSurface</span> = CreateObject(<span class="st">"CommandoQuant.VolSurface"</span>)
+    <span class="nm">m_volSurface</span>.LoadFromArray <span class="fn">GetVolSurfaceArray</span>()
+
+    <span class="cm">' 4. Data Layer (Access en standalone)</span>
+    <span class="kw">Set</span> <span class="nm">m_repo</span> = <span class="kw">New</span> <span class="tp">CAccessRepository</span>
+    <span class="nm">m_repo</span>.Initialize <span class="nm">m_config</span>.GetParam(<span class="st">"DB_CONNECTION"</span>), <span class="nm">m_logger</span>
+
+    <span class="cm">' 5. Cache positions</span>
+    <span class="kw">Set</span> <span class="nm">m_cache</span> = <span class="kw">New</span> <span class="tp">CPositionCache</span>
+    <span class="nm">m_cache</span>.Initialize <span class="nm">m_repo</span>
+
+    <span class="cm">' 6. Workflow Engine</span>
+    <span class="kw">Set</span> <span class="nm">m_workflow</span> = <span class="kw">New</span> <span class="tp">CWorkflowEngine</span>
+    <span class="nm">m_workflow</span>.Initialize <span class="nm">m_logger</span>, <span class="nm">m_repo</span>, <span class="nm">m_pricingDll</span>
+
+    <span class="nm">m_logger</span>.Info "CApp initialized — " &amp; <span class="nm">m_cache</span>.Count &amp; " positions loaded"
+    <span class="kw">Exit Sub</span>
+ErrHandler:
+    MsgBox "FATAL: CommandoQuant init failed." &amp; vbNewLine &amp; Err.Description, vbCritical
+<span class="kw">End Sub</span>
+
+<span class="cm">' === Public accessors ===</span>
+<span class="kw">Public Property Get</span> <span class="fn">PricingEngine</span>() <span class="kw">As Object</span>
+    <span class="kw">Set</span> <span class="fn">PricingEngine</span> = <span class="nm">m_pricingDll</span>
+<span class="kw">End Property</span>
+<span class="kw">Public Property Get</span> <span class="fn">VolSurface</span>() <span class="kw">As Object</span>
+    <span class="kw">Set</span> <span class="fn">VolSurface</span> = <span class="nm">m_volSurface</span>
+<span class="kw">End Property</span>
+<span class="kw">Public Property Get</span> <span class="fn">Workflow</span>() <span class="kw">As</span> <span class="tp">CWorkflowEngine</span>
+    <span class="kw">Set</span> <span class="fn">Workflow</span> = <span class="nm">m_workflow</span>
+<span class="kw">End Property</span></pre>
+    </div>
+    <div class="callout blue" style="margin-top:1rem">
+      <strong>Dans ThisWorkbook :</strong><br/>
+      <code>Private m_app As CApp</code><br/>
+      <code>Public Property Get App() As CApp : Set App = m_app : End Property</code><br/>
+      <code>Private Sub Workbook_Open() : Set m_app = New CApp : m_app.Initialize : End Sub</code><br/><br/>
+      Tous les boutons appellent <code>ThisWorkbook.App.PricingEngine.Price(...)</code> ou <code>ThisWorkbook.App.Workflow.Transition(...)</code>.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Implémentation Multi-Stack · VBA · C# · VB.net · Python · SQL</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="architecture.html">Architecture</a> · <a href="features.html">Features E2E</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

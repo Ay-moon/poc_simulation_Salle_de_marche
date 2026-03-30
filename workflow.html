@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Workflow — CommandoQuant Quant Equity Risk</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html" class="active">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🔄 Workflow &amp; Cycle de Vie</h1>
+  <p>États d'une position options, pipeline de calcul quotidien, alertes limites et audit trail</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Workflow</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 1 — STATE MACHINE ════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">State Machine</span>
+      <h2>Les 6 états d'une position en dérivés actions</h2>
+      <p>Chaque position passe par une séquence d'états contrôlée par <code>CWorkflowEngine</code>. Aucun saut d'état sans validation des règles métier.</p>
+    </div>
+
+    <div style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;margin-bottom:2rem">
+      <span class="state-badge state-draft">SAISI</span>
+      <span style="align-self:center;color:var(--fo-muted)">→</span>
+      <span class="state-badge state-confirmed">VALIDÉ</span>
+      <span style="align-self:center;color:var(--fo-muted)">→</span>
+      <span class="state-badge state-shipped">PRICÉ</span>
+      <span style="align-self:center;color:var(--fo-muted)">→</span>
+      <span class="state-badge state-invoiced">HEDGÉ</span>
+      <span style="align-self:center;color:var(--fo-muted)">→</span>
+      <span class="state-badge state-fixed">ACTIF</span>
+      <span style="align-self:center;color:var(--fo-muted)">→</span>
+      <span class="state-badge state-settled">BOUCLÉ</span>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Pattern "State Machine" dans CWorkflowEngine</strong><br/>
+          Le workflow utilise le pattern State : chaque état connaît les transitions autorisées et les conditions. La méthode <code>CWorkflowEngine.Transition(position, newState)</code> vérifie les pré-conditions, exécute les actions (calcule les Greeks, crée le hedge, log), puis change l'état. Impossible de passer de SAISI directement à HEDGÉ.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+stateDiagram-v2
+  [*] --> SAISI : Nouvelle position saisie
+  SAISI --> VALIDÉ : Données complètes\n(CPositionValidator)
+  SAISI --> ANNULÉ : Saisie abandonnée
+  VALIDÉ --> PRICÉ : Market data disponibles\n(CBlackScholesEngine.Price)
+  VALIDÉ --> ANNULÉ : Données invalides
+  PRICÉ --> HEDGÉ : Delta hedge exécuté\n(CGreeks.DeltaHedge)
+  PRICÉ --> PRICÉ : Reprice (vol update)
+  HEDGÉ --> ACTIF : Greeks dans limites\n(CRiskService.CheckLimits)
+  HEDGÉ --> LIMITE_BREACH : Greeks hors limites
+  LIMITE_BREACH --> HEDGÉ : Ajustement hedge
+  ACTIF --> PRICÉ : EOD reprice\n(market data close)
+  ACTIF --> BOUCLÉ : Expiration ou dénouement
+  BOUCLÉ --> [*]
+  ANNULÉ --> [*]
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — DÉTAIL ÉTATS ═════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">États</span>
+      <h2>Détail de chaque état</h2>
+    </div>
+    <table class="fo-table">
+      <thead>
+        <tr>
+          <th>État</th>
+          <th>Conditions d'entrée</th>
+          <th>Actions déclenchées</th>
+          <th>Champs obligatoires</th>
+          <th>Acteur déclencheur</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="state-badge state-draft">SAISI</span></td>
+          <td>Création position (New)</td>
+          <td>Génère PositionID · Log création</td>
+          <td>Underlying, Type (Call/Put), Strike, Maturity, Notional</td>
+          <td>Trader / Quant Dev</td>
+        </tr>
+        <tr>
+          <td><span class="state-badge state-confirmed">VALIDÉ</span></td>
+          <td>CPositionValidator.Validate() = True</td>
+          <td>Position validée · Blotter mis à jour · Market data feed demandé</td>
+          <td>Vol implicite, spot, taux, dividendes, sens (Buy/Sell)</td>
+          <td>Trader (confirmation saisie)</td>
+        </tr>
+        <tr>
+          <td><span class="state-badge state-shipped">PRICÉ</span></td>
+          <td>Market data disponibles (spot, vol, taux)</td>
+          <td>CBlackScholesEngine.Price() · CGreeks.Calc() · P&amp;L théo calculé · Blotter mis à jour</td>
+          <td>Spot, Volatilité implicite (surface), Taux sans risque</td>
+          <td>Automatique (market data feed) ou Quant</td>
+        </tr>
+        <tr>
+          <td><span class="state-badge state-invoiced">HEDGÉ</span></td>
+          <td>Delta hedge exécuté en marché</td>
+          <td>CHedge créé · Delta résiduel recalculé · Risk limits vérifiées</td>
+          <td>Quantité hedge, prix d'exécution, référence ordre</td>
+          <td>Trader (exécution hedge)</td>
+        </tr>
+        <tr>
+          <td><span class="state-badge state-fixed">ACTIF</span></td>
+          <td>Greeks dans les limites autorisées</td>
+          <td>Surveillance continue · EOD reprice quotidien · Alertes si dépassement</td>
+          <td>Greeks Delta/Gamma/Vega dans les limites du book</td>
+          <td>Automatique + Risk Manager (validation)</td>
+        </tr>
+        <tr>
+          <td><span class="state-badge state-settled">BOUCLÉ</span></td>
+          <td>Expiration ou dénouement anticipé</td>
+          <td>P&amp;L final calculé · Position archivée · Rapport de clôture</td>
+          <td>Date expiration, cash flow de règlement, P&amp;L final</td>
+          <td>Automatique (expiration) ou Trader (dénouement)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — PIPELINE QUOTIDIEN ══════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Pipeline EOD</span>
+      <h2>Pipeline de calcul quotidien — End Of Day</h2>
+      <p>Chaque soir, le pipeline EOD recalcule toutes les positions, les Greeks, la VaR et génère les rapports de risque.</p>
+    </div>
+    <div class="grid grid-2">
+      <div>
+        <div class="diagram-container">
+          <div class="diagram-header">
+            <div class="expert-icon">⏰</div>
+            <div class="expert-tooltip">
+              <strong>Séquence EOD — 17h30 Paris</strong><br/>
+              À la clôture des marchés, le pipeline récupère les cours de clôture, reprice toutes les positions, calcule les Greeks agrégés par book, puis lance les calculs VaR et stress tests. Le tout se déroule en séquence automatisée, de Excel VBA (orchestration) vers C# (pricing) et Python (VaR).
+            </div>
+          </div>
+          <div class="diagram-body">
+            <div class="mermaid">
+timeline
+  title Pipeline EOD — Calcul Risque Quotidien
+  17h30 : Clôture marché : Récupération cours de clôture + vol implicite close
+  17h45 : Reprice positions : CBlackScholesEngine.PriceAll() — toutes positions actives
+  18h00 : Greeks consolidés : CGreeks.AggregateBook() — Δ Γ ν θ par book/desk
+  18h15 : VaR quotidienne : Python VaRCalculator — 3 méthodes en parallèle
+  18h30 : Stress tests : Python StressTester — scénarios macro + historiques
+  18h45 : P&L attribution : Décomposition Δ+Γ+ν+θ vs P&L réel
+  19h00 : Rapports générés : Risk report + P&L report + VaR report exportés
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--fo-dark);margin-bottom:1rem;font-size:1rem;font-weight:700">Séquence d'appels inter-langages</h3>
+        <div class="diagram-container">
+          <div class="diagram-body" style="padding:1rem">
+            <div class="mermaid">
+sequenceDiagram
+  participant VBA as Excel VBA (Orchestrateur)
+  participant CS as C# PricingEngine
+  participant DB as SQL/Access
+  participant PY as Python Analytics
+
+  VBA->>DB: Charge positions actives (tbl_Positions)
+  VBA->>CS: PricingEngine.PriceBook(positions, marketData)
+  CS->>CS: BlackScholes.PriceAll() → prix + Greeks
+  CS->>DB: Sauvegarde tbl_Greeks (batch insert)
+  CS->>VBA: Résultats Greeks consolidés
+  VBA->>PY: VaRCalculator.run(book, "all")
+  PY->>DB: Lit historique 250j (tbl_HistoricalData)
+  PY->>PY: VaR paramétrique + historique + MC
+  PY->>VBA: VaR dict {parametric, historical, mc}
+  VBA->>VBA: Génère rapports Excel + alertes limites
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — EXCEPTIONS ═══════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag red">Exceptions</span>
+      <h2>Cas d'exception &amp; alertes risque</h2>
+      <p>Les cas non nominaux doivent être gérés explicitement. <code>CRiskService</code> surveille les limites et émet les alertes.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card red fade-up delay-1">
+        <div class="card-icon">⚠️</div>
+        <h3>Dépassement limite Greek</h3>
+        <p>Le Delta ou le Gamma du book dépasse la limite autorisée. <code>CRiskService.CheckGreekLimits()</code> compare les Greeks agrégés aux limites définies dans <code>tbl_RiskLimits</code>. Alerte immédiate au Risk Manager + blocage des nouvelles positions.</p>
+      </div>
+      <div class="card red fade-up delay-2">
+        <div class="card-icon">📉</div>
+        <h3>Dépassement VaR</h3>
+        <p>La VaR calculée dépasse la limite de VaR du desk. Déclenchement d'une procédure d'escalade : notification automatique, gel des nouvelles positions, rapport d'exception à la Direction des Risques. Traçabilité complète dans tbl_AuditLog.</p>
+      </div>
+      <div class="card red fade-up delay-3">
+        <div class="card-icon">🌊</div>
+        <h3>Données de marché manquantes</h3>
+        <p>Surface de vol incomplète ou cours absent pour un sous-jacent. <code>CMarketDataService.Validate()</code> détecte les trous. Fallback : interpolation ou utilisation de la dernière valeur disponible avec flag "STALE". Alerte Middle Office.</p>
+      </div>
+      <div class="card fade-up delay-1">
+        <div class="card-icon">🔄</div>
+        <h3>Model Override</h3>
+        <p>Le Risk Manager remplace le prix modèle par un prix de consensus ou un prix de clôture différent. <code>CPosition.ModelOverride = True</code>. L'override est tracé dans tbl_AuditLog avec justification et approbation obligatoire.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">📊</div>
+        <h3>Backtesting Breach</h3>
+        <p>La perte réelle dépasse la VaR prévue (exception de backtesting). Selon Bâle III, plus de 4 exceptions sur 250j → passage en zone rouge → capital supplémentaire requis. CommandoQuant comptabilise et alerte automatiquement.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">📅</div>
+        <h3>Expiration imminente</h3>
+        <p>Une option arrive à expiration dans les 5 jours ouvrés. <code>CWorkflowEngine</code> émet une alerte : décision à prendre (dénouement anticipé, exercice, ou laissez expirer). Le Theta s'accélère → P&amp;L impact fort si position non gérée.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 5 — AUDIT TRAIL ══════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag teal">Audit</span>
+      <h2>Audit Trail — Traçabilité complète</h2>
+      <p>Chaque action sur une position est tracée : qui, quoi, quand, depuis quel état, vers quel état, avec quelles données de marché.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">🔏</div>
+        <div class="expert-tooltip">
+          <strong>Exigences réglementaires MiFID II / EMIR</strong><br/>
+          Les régulateurs (AMF, ESMA) exigent une traçabilité complète des transactions et calculs de risque. Dans CommandoQuant, chaque action est loggée dans tbl_AuditLog : timestamp, user, positionId, action, paramètres, résultats. Immuable : append-only, pas de modification possible.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div style="background:#1E2A3A;border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.78rem;color:#E0E0E0;overflow-x:auto">
+<pre style="margin:0">
+Timestamp            | User    | PosID        | Action           | OldState  | NewState  | Detail
+---------------------|---------|--------------|------------------|-----------|-----------|------------------------------------------
+2024-03-15 09:02:11  | mmartin | POS-2024-042 | CREATE           | -         | SAISI     | Call TTE K=60 T=90j N=100000 BS
+2024-03-15 09:05:34  | mmartin | POS-2024-042 | VALIDATE         | SAISI     | VALIDÉ    | Spot=58.40 Vol=28% r=3.5%
+2024-03-15 09:06:01  | system  | POS-2024-042 | PRICE            | VALIDÉ    | PRICÉ     | BS=2.45€ Δ=0.52 Γ=0.08 ν=0.18 θ=-0.02
+2024-03-15 09:22:15  | mmartin | POS-2024-042 | DELTA_HEDGE      | PRICÉ     | HEDGÉ     | Sold 52000 TTE @58.40 RefOrdre=ORD-7823
+2024-03-15 09:23:00  | system  | POS-2024-042 | CHECK_LIMITS     | HEDGÉ     | ACTIF     | Δ_book=+0.02 Γ_book=+12500 OK
+2024-03-15 18:02:30  | system  | POS-2024-042 | EOD_REPRICE      | ACTIF     | ACTIF     | Spot=59.10 Vol=27.5% BS=2.71€ Δ=0.55
+2024-03-15 18:15:00  | system  | POS-2024-042 | VAR_CALC         | -         | -         | VaR_1j_99%=125000€ Meth=MC
+2024-03-15 18:30:00  | jrichard| POS-2024-042 | MODEL_OVERRIDE   | ACTIF     | ACTIF     | PriceOverride=2.68€ Reason="Consensus BD"</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout green" style="margin-top:1.5rem">
+      <strong>Implémentation dans CLogger :</strong> La méthode <code>CLogger.LogWorkflowTransition(pos, oldState, newState, user, detail)</code> écrit une ligne dans <code>tbl_AuditLog</code>. Les lignes ne peuvent pas être supprimées (protection feuille + contrainte SQL). Export CSV via <code>CReportService.ExportAuditLog()</code> pour contrôles réglementaires.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Workflow &amp; State Machine · Pipeline EOD · Audit Trail</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="architecture.html">Architecture</a> · <a href="implementation.html">Implémentation</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

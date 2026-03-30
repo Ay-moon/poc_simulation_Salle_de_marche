@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Data Model — CommandoQuant Quant Equity Risk</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html" class="active">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🗄️ Data Model — Tables SQL Server + Excel</h1>
+  <p>Schéma complet des 11 tables sur <strong>PERSO-AJE-DELL\BFASERVER01 / CommandoQuant</strong> : positions, Greeks, VaR, market data, stress tests</p>
+  <p style="font-size:0.88rem;color:#F0B429;margin-top:0.4rem">⚠️ Access décommissionné — les tables existent déjà sur SQL Server et sont réutilisées</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Data Model</span>
+  </div>
+</div>
+
+<!-- ═══ SECTION 1 — ERD GLOBAL ═══════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Schéma global</span>
+      <h2>11 tables — SQL Server PERSO-AJE-DELL\BFASERVER01</h2>
+      <p>Toutes les tables sont sur SQL Server. Les tables existent déjà — on les réutilise. Microsoft Access est décommissionné.</p>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-header">
+        <div class="expert-icon">💬</div>
+        <div class="expert-tooltip">
+          <strong>Pourquoi SQL Server et non Access ?</strong><br/>
+          SQL Server c'est le champion poids lourd. Access c'était le débutant pratique. En salle de marché, tu peux avoir 50 traders qui lisent et écrivent des données en même temps. Access plante dans cette situation. SQL Server gère ça les yeux fermés.<br/><br/>
+          <strong style="color:#F0B429">🎓 Junior, imagine ça :</strong> Access, c'est comme un cahier de notes partagé entre 50 personnes. Si tout le monde écrit en même temps, c'est le chaos. SQL Server, c'est comme Google Docs : 1000 personnes peuvent modifier en même temps, et chaque modification est tracée, sécurisée, et annulable. En finance, ça n'a pas de prix.<br/><br/>
+          <strong>Les tables existantes sur BFASERVER01 sont réutilisées directement.</strong> Le schéma est identique à ce qui était prévu pour la production.
+        </div>
+      </div>
+      <div class="diagram-body">
+        <div class="mermaid">
+erDiagram
+  tbl_Positions ||--o{ tbl_Greeks : "PositionId"
+  tbl_Positions ||--o{ tbl_Hedges : "PositionId"
+  tbl_Positions ||--o{ tbl_PnL : "PositionId"
+  tbl_Positions }o--|| tbl_Underlyings : "UnderlyingId"
+  tbl_Positions ||--o{ tbl_AuditLog : "PositionId"
+  tbl_VaR }o--|| tbl_Positions : "BookId"
+  tbl_StressTest }o--|| tbl_Positions : "BookId"
+  tbl_MarketData }o--|| tbl_Underlyings : "UnderlyingId"
+  tbl_VolSurface }o--|| tbl_Underlyings : "UnderlyingId"
+
+  tbl_Positions {
+    string PositionId PK
+    string UnderlyingId FK
+    string OptionType
+    string ExerciseStyle
+    number Strike
+    date Maturity
+    number Notional
+    string BuySell
+    string WorkflowState
+    date CreatedAt
+    string CreatedBy
+  }
+  tbl_Greeks {
+    string GreeksId PK
+    string PositionId FK
+    date CalcDate
+    number Price
+    number Delta
+    number Gamma
+    number Vega
+    number Theta
+    number Rho
+    number Spot
+    number ImpliedVol
+    string Model
+  }
+  tbl_VaR {
+    string VaRId PK
+    string BookId
+    date CalcDate
+    number VaR_Parametric
+    number VaR_Historical
+    number VaR_MonteCarlo
+    number ES_99
+    number Confidence
+    string Horizon
+  }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 2 — TABLE SCHEMAS ════════════════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag blue">Schémas</span>
+      <h2>Schéma détaillé par table</h2>
+    </div>
+
+    <!-- tbl_Positions -->
+    <h3 style="color:var(--fo-amber);margin-bottom:1rem;font-size:1rem;font-weight:800;border-left:3px solid var(--fo-amber);padding-left:0.8rem">📋 tbl_Positions — Blotter Excel + SQL</h3>
+    <table class="fo-table" style="margin-bottom:2rem">
+      <thead><tr><th>#</th><th>Colonne</th><th>Type</th><th>Exemple</th><th>Obligatoire</th><th>Remarque</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>PositionId</td><td>VARCHAR(20)</td><td>POS-2024-042</td><td>✅</td><td>Format: POS-YYYY-NNN (auto)</td></tr>
+        <tr><td>2</td><td>UnderlyingId</td><td>VARCHAR(20)</td><td>TTE.PA</td><td>✅</td><td>FK → tbl_Underlyings (ticker Bloomberg)</td></tr>
+        <tr><td>3</td><td>OptionType</td><td>VARCHAR(4)</td><td>CALL</td><td>✅</td><td>CALL / PUT</td></tr>
+        <tr><td>4</td><td>ExerciseStyle</td><td>VARCHAR(2)</td><td>EU</td><td>✅</td><td>EU (européen) / US (américain)</td></tr>
+        <tr><td>5</td><td>Strike</td><td>DECIMAL(12,4)</td><td>60.00</td><td>✅</td><td>Prix d'exercice (même devise que sous-jacent)</td></tr>
+        <tr><td>6</td><td>Maturity</td><td>DATE</td><td>2024-06-21</td><td>✅</td><td>Date d'expiration (3ème vendredi du mois pour listées)</td></tr>
+        <tr><td>7</td><td>Notional</td><td>BIGINT</td><td>100000</td><td>✅</td><td>Nombre d'options (lot = 100 pour options listées)</td></tr>
+        <tr><td>8</td><td>BuySell</td><td>VARCHAR(4)</td><td>BUY</td><td>✅</td><td>BUY (long) / SELL (short)</td></tr>
+        <tr><td>9</td><td>PremiumPaid</td><td>DECIMAL(15,4)</td><td>2.45</td><td></td><td>Prime payée/reçue à l'initiation</td></tr>
+        <tr><td>10</td><td>BookId</td><td>VARCHAR(20)</td><td>BOOK-EQ-01</td><td>✅</td><td>Identifiant du book/desk</td></tr>
+        <tr><td>11</td><td>PricingModel</td><td>VARCHAR(20)</td><td>BLACK_SCHOLES</td><td>✅</td><td>BLACK_SCHOLES / BINOMIAL / MONTE_CARLO</td></tr>
+        <tr><td>12</td><td>WorkflowState</td><td>VARCHAR(20)</td><td>ACTIF</td><td>✅</td><td>Géré par CWorkflowEngine uniquement</td></tr>
+        <tr><td>13</td><td>ModelOverride</td><td>BIT</td><td>0</td><td></td><td>1 si prix remplacé manuellement</td></tr>
+        <tr><td>14</td><td>OverridePrice</td><td>DECIMAL(12,4)</td><td>null</td><td></td><td>Prix override si ModelOverride=1</td></tr>
+        <tr><td>15</td><td>CreatedAt</td><td>DATETIME</td><td>2024-03-15 09:02:11</td><td>✅</td><td>Auto (CApp)</td></tr>
+        <tr><td>16</td><td>CreatedBy</td><td>VARCHAR(50)</td><td>mmartin</td><td>✅</td><td>Environ("USERNAME") Windows</td></tr>
+      </tbody>
+    </table>
+
+    <!-- tbl_Greeks -->
+    <h3 style="color:var(--fo-amber);margin-bottom:1rem;font-size:1rem;font-weight:800;border-left:3px solid var(--fo-amber);padding-left:0.8rem">⚗️ tbl_Greeks — Historique des valorisations</h3>
+    <table class="fo-table" style="margin-bottom:2rem">
+      <thead><tr><th>#</th><th>Colonne</th><th>Type</th><th>Exemple</th><th>Remarque</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>GreeksId</td><td>VARCHAR(30)</td><td>GRK-POS042-20240315</td><td>Auto-généré</td></tr>
+        <tr><td>2</td><td>PositionId</td><td>VARCHAR(20)</td><td>POS-2024-042</td><td>FK → tbl_Positions</td></tr>
+        <tr><td>3</td><td>CalcDate</td><td>DATE</td><td>2024-03-15</td><td>Date de calcul (1 ligne par position/jour)</td></tr>
+        <tr><td>4</td><td>Price</td><td>DECIMAL(12,6)</td><td>2.450000</td><td>Prix modèle (€ par option)</td></tr>
+        <tr><td>5</td><td>Delta</td><td>DECIMAL(8,6)</td><td>0.520000</td><td>∂V/∂S — entre -1 et 1</td></tr>
+        <tr><td>6</td><td>Gamma</td><td>DECIMAL(12,8)</td><td>0.08000000</td><td>∂²V/∂S² — toujours positif pour vanilla</td></tr>
+        <tr><td>7</td><td>Vega</td><td>DECIMAL(10,6)</td><td>0.180000</td><td>€ par 1% de vol (sensibilité à σ)</td></tr>
+        <tr><td>8</td><td>Theta</td><td>DECIMAL(10,6)</td><td>-0.020000</td><td>€ par jour (négatif pour buyer)</td></tr>
+        <tr><td>9</td><td>Rho</td><td>DECIMAL(10,6)</td><td>0.050000</td><td>€ par 1% de taux</td></tr>
+        <tr><td>10</td><td>Vanna</td><td>DECIMAL(12,8)</td><td>-0.00320000</td><td>∂Δ/∂σ — cross-sensibilité</td></tr>
+        <tr><td>11</td><td>Volga</td><td>DECIMAL(12,8)</td><td>0.00150000</td><td>∂ν/∂σ — convexité vol</td></tr>
+        <tr><td>12</td><td>Spot</td><td>DECIMAL(12,4)</td><td>58.4000</td><td>Spot utilisé pour le calcul</td></tr>
+        <tr><td>13</td><td>ImpliedVol</td><td>DECIMAL(8,6)</td><td>0.280000</td><td>Vol implicite utilisée (28%)</td></tr>
+        <tr><td>14</td><td>RiskFreeRate</td><td>DECIMAL(8,6)</td><td>0.035000</td><td>Taux sans risque (3.5%)</td></tr>
+        <tr><td>15</td><td>Model</td><td>VARCHAR(20)</td><td>BLACK_SCHOLES</td><td>Modèle utilisé pour ce calcul</td></tr>
+      </tbody>
+    </table>
+
+    <!-- tbl_VaR -->
+    <h3 style="color:var(--fo-green);margin-bottom:1rem;font-size:1rem;font-weight:800;border-left:3px solid var(--fo-green);padding-left:0.8rem">📊 tbl_VaR — Résultats VaR quotidiens</h3>
+    <table class="fo-table" style="margin-bottom:2rem">
+      <thead><tr><th>#</th><th>Colonne</th><th>Type</th><th>Exemple</th><th>Remarque</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>VaRId</td><td>VARCHAR(30)</td><td>VAR-BOOK01-20240315</td><td>Auto-généré</td></tr>
+        <tr><td>2</td><td>BookId</td><td>VARCHAR(20)</td><td>BOOK-EQ-01</td><td>Agrégé par book</td></tr>
+        <tr><td>3</td><td>CalcDate</td><td>DATE</td><td>2024-03-15</td><td>Date EOD</td></tr>
+        <tr><td>4</td><td>VaR_Parametric</td><td>DECIMAL(18,2)</td><td>98500.00</td><td>VaR paramétrique 1j 99% (€)</td></tr>
+        <tr><td>5</td><td>VaR_Historical</td><td>DECIMAL(18,2)</td><td>112000.00</td><td>VaR historique 1j 99% (€)</td></tr>
+        <tr><td>6</td><td>VaR_MonteCarlo</td><td>DECIMAL(18,2)</td><td>125000.00</td><td>VaR Monte Carlo 1j 99% (€)</td></tr>
+        <tr><td>7</td><td>ES_99</td><td>DECIMAL(18,2)</td><td>162000.00</td><td>Expected Shortfall (CVaR) 99% (€)</td></tr>
+        <tr><td>8</td><td>VaR_Limit</td><td>DECIMAL(18,2)</td><td>200000.00</td><td>Limite VaR autorisée (depuis tbl_RiskLimits)</td></tr>
+        <tr><td>9</td><td>LimitBreached</td><td>BIT</td><td>0</td><td>1 si VaR_MC > VaR_Limit</td></tr>
+        <tr><td>10</td><td>NbPositions</td><td>INT</td><td>23</td><td>Nombre de positions dans le book</td></tr>
+        <tr><td>11</td><td>ActualPnL</td><td>DECIMAL(18,2)</td><td>47500.00</td><td>P&amp;L réel du lendemain (pour backtesting)</td></tr>
+        <tr><td>12</td><td>BacktestBreached</td><td>BIT</td><td>0</td><td>1 si |ActualPnL| > VaR (exception backtesting)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ SECTION 3 — TABLES SUPPORT ══════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Tables support</span>
+      <h2>Tables de référence &amp; market data</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📈</div>
+        <h3>tbl_MarketData — Cours historiques</h3>
+        <table class="fo-table" style="margin-top:0.5rem">
+          <thead><tr><th>Colonne</th><th>Type</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td>UnderlyingId</td><td>VARCHAR(20)</td><td>TTE.PA</td></tr>
+            <tr><td>TradeDate</td><td>DATE</td><td>2024-03-15</td></tr>
+            <tr><td>ClosePrice</td><td>DECIMAL(12,4)</td><td>59.10</td></tr>
+            <tr><td>DailyReturn</td><td>DECIMAL(10,8)</td><td>0.01199588</td></tr>
+            <tr><td>HistoricalVol_30d</td><td>DECIMAL(8,6)</td><td>0.265000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">🌡️</div>
+        <h3>tbl_VolSurface — Surface de vol</h3>
+        <table class="fo-table" style="margin-top:0.5rem">
+          <thead><tr><th>Colonne</th><th>Type</th><th>Exemple</th></tr></thead>
+          <tbody>
+            <tr><td>UnderlyingId</td><td>VARCHAR(20)</td><td>TTE.PA</td></tr>
+            <tr><td>SnapDate</td><td>DATE</td><td>2024-03-15</td></tr>
+            <tr><td>Moneyness</td><td>DECIMAL(6,4)</td><td>0.9667</td></tr>
+            <tr><td>Maturity_Years</td><td>DECIMAL(6,4)</td><td>0.2500</td></tr>
+            <tr><td>ImpliedVol</td><td>DECIMAL(8,6)</td><td>0.280000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">⚙️</div>
+        <h3>tbl_Config — Paramètres système</h3>
+        <table class="fo-table" style="margin-top:0.5rem">
+          <thead><tr><th>ParamKey</th><th>ParamValue</th></tr></thead>
+          <tbody>
+            <tr><td>LOG_LEVEL</td><td>INFO</td></tr>
+            <tr><td><strong>SQL_SERVER</strong></td><td><strong>PERSO-AJE-DELL\BFASERVER01</strong></td></tr>
+            <tr><td><strong>SQL_DATABASE</strong></td><td><strong>CommandoQuant</strong></td></tr>
+            <tr><td>VAR_CONFIDENCE</td><td>0.99</td></tr>
+            <tr><td>VAR_HORIZON_DAYS</td><td>1</td></tr>
+            <tr><td>HISTORICAL_WINDOW</td><td>250</td></tr>
+            <tr><td>MC_SIMULATIONS</td><td>10000</td></tr>
+            <tr><td>DEFAULT_RISK_FREE</td><td>0.035</td></tr>
+            <tr style="opacity:0.4;text-decoration:line-through"><td>DB_CONNECTION (Access)</td><td>❌ Supprimé</td></tr>
+          </tbody>
+        </table>
+        <div class="callout" style="margin-top:0.6rem;font-size:0.82rem">
+          💡 <strong>Junior :</strong> Cette table, c'est le "cerveau de configuration" du système. Au lieu de mettre les paramètres en dur dans le code (mauvaise pratique !), on les met dans une table SQL. Comme ça, si le nom du serveur change, tu changes juste une ligne dans la table — pas besoin de recompiler le code.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SECTION 4 — MAPPING SHEET ↔ DOMAIN ═══════════════════ -->
+<section class="section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag teal">Mapping</span>
+      <h2>Mapping : Feuille Excel ↔ Table SQL/Access ↔ Classe Domain</h2>
+      <p>Chaque feuille Excel est une vue. Le Repository fait le mapping colonne ↔ propriété de classe.</p>
+    </div>
+    <table class="fo-table">
+      <thead>
+        <tr><th>Feuille Excel</th><th>Table SQL Server</th><th>Classe Domain</th><th>Repository</th><th>Rôle</th><th>Acteur métier</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Blotter</td><td>tbl_Positions</td><td>CPosition</td><td>CSqlPositionRepository</td><td>Vue positions live + actions (price, hedge)</td><td>🧑‍💼 Trader</td></tr>
+        <tr><td>Deal Ticket</td><td>tbl_Positions (INSERT)</td><td>COption (saisie)</td><td>Repository.Save()</td><td>Formulaire de saisie d'une nouvelle position</td><td>🧑‍💼 Trader / MiddleOffice</td></tr>
+        <tr><td>Greeks Dashboard</td><td>tbl_Greeks (latest)</td><td>CGreeks</td><td>CSqlGreeksRepository</td><td>Affichage Δ Γ ν θ par position + book agrégé</td><td>⚠️ Risk Manager</td></tr>
+        <tr><td>VaR Report</td><td>tbl_VaR</td><td>–</td><td>–</td><td>Résultats VaR générés par Python (var_engine.py)</td><td>⚠️ Risk Manager</td></tr>
+        <tr><td>P&amp;L</td><td>tbl_PnL</td><td>–</td><td>–</td><td>P&amp;L quotidien théorique + réel + attribution Greeks</td><td>🧑‍💼 Trader / MiddleOffice</td></tr>
+        <tr><td>Vol Surface</td><td>tbl_VolSurface</td><td>VolSurface</td><td>CVolSurfaceRepository</td><td>Saisie / visualisation surface de vol implicite</td><td>💻 Quant Dev</td></tr>
+        <tr><td>Market Data</td><td>tbl_MarketData</td><td>CMarketData</td><td>CMarketDataRepository</td><td>Cours historiques et vol historique 30j</td><td>💻 Quant Dev / DataAnalyst</td></tr>
+        <tr><td>Stress Test</td><td>tbl_StressTest</td><td>–</td><td>–</td><td>Résultats scénarios stress (Python)</td><td>⚠️ Risk Manager</td></tr>
+        <tr><td>Config</td><td>tbl_Config</td><td>–</td><td>CConfig</td><td>Paramètres SQL Server, VaR confidence, MC runs</td><td>💻 Quant Dev / IT</td></tr>
+        <tr><td>AuditLog</td><td>tbl_AuditLog</td><td>–</td><td>CLogger</td><td>Trace immuable de toutes les actions</td><td>🏛️ Compliance / MiddleOffice</td></tr>
+      </tbody>
+    </table>
+    <div class="callout blue" style="margin-top:1rem">
+      <strong>💡 Expert Finance parle au Junior (comme si t'avais 5 ans) :</strong><br/>
+      Tu vois la colonne "Acteur métier" ? C'est important de savoir QUI utilise QUOI et POURQUOI :<br/>
+      • 🧑‍💼 <strong>Trader</strong> : il veut saisir des deals et voir ses positions. Il n'aime pas les bugs. Il veut tout en temps réel.<br/>
+      • ⚠️ <strong>Risk Manager</strong> : il surveille que le Trader ne prend pas trop de risques. Il peut bloquer une position si la VaR dépasse la limite.<br/>
+      • 💻 <strong>Quant Dev</strong> : il construit l'outil. Il touche à tout mais surtout aux formules et aux données de marché.<br/>
+      • 🏛️ <strong>Compliance</strong> : il doit prouver que tout est tracé et conforme à la réglementation (MiFID2, FRTB).
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>CommandoQuant · Data Model · 11 Tables · SQL Server PERSO-AJE-DELL\BFASERVER01 · Access décommissionné</p>
+  <p style="margin-top:0.5rem"><a href="index.html">Overview</a> · <a href="architecture.html">Architecture</a> · <a href="implementation.html">Implémentation</a></p>
+</footer>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Use Case — CommandoQuant · Une journée de trading</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html" class="active">Use Case</a></li>
+    <li><a href="vba-oop.html">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🎬 Use Case — Une journée avec CommandoQuant</h1>
+  <p>Storytelling : le quotidien réel d'un trader options equity qui utilise l'outil de bout en bout</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>Use Case</span>
+  </div>
+</div>
+
+<!-- ═══ PERSONA ══════════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Persona</span>
+      <h2>Sophie — Trader Options Equity, desk CAC 40</h2>
+      <p>BNP Paribas CIB, Paris. Desk Equity Derivatives. Sophie gère un portefeuille d'options vanilles sur actions françaises. Son outil : CommandoQuant.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card amber fade-up delay-1">
+        <div class="card-icon">👩‍💼</div>
+        <h3>Profil</h3>
+        <ul style="font-size:0.88rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>5 ans d'expérience Equity Derivatives</li>
+          <li>Sous-jacents : TTE, BNP, AIR, MC, SAN</li>
+          <li>Produits : options vanilles EU/US</li>
+          <li>Objectif quotidien : gérer le risque Greeks</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">🎯</div>
+        <h3>Besoins</h3>
+        <ul style="font-size:0.88rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>Pricer rapidement une nouvelle option</li>
+          <li>Voir l'impact sur les Greeks du portefeuille</li>
+          <li>Garder un historique de tous les pricings</li>
+          <li>Générer des rapports de risque</li>
+        </ul>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">⚡</div>
+        <h3>Avant CommandoQuant</h3>
+        <ul style="font-size:0.88rem;color:var(--fo-muted);line-height:2;padding-left:1rem">
+          <li>Formules Excel manuelles éparpillées</li>
+          <li>Aucun historique structuré</li>
+          <li>Erreurs de saisie fréquentes</li>
+          <li>Pas de validation des données</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ JOURNÉE TIMELINE ══════════════════════════════════════ -->
+<section class="section" style="background:var(--fo-light)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Storytelling</span>
+      <h2>07h45 → 18h00 — Une journée de trading</h2>
+      <p>Chaque interaction de Sophie avec CommandoQuant, de l'ouverture des marchés à la clôture.</p>
+    </div>
+
+    <!-- 07h45 -->
+    <div class="card amber" style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <span style="font-size:1.8rem">🌅</span>
+        <div>
+          <h3 style="color:var(--fo-gold)">07h45 — Ouverture du desk</h3>
+          <span style="font-size:0.8rem;color:var(--fo-muted)">Avant l'ouverture des marchés européens</span>
+        </div>
+      </div>
+      <p style="margin-bottom:1rem">Sophie arrive au bureau. Avant même d'ouvrir son terminal Bloomberg, elle lance <strong>CommandoQuant.xlsm</strong>. L'outil s'initialise en silence :</p>
+      <pre><code style="font-size:0.82rem">
+  ' Dans la RAM, CApp crée instantanément tout l'écosystème :
+  CApp → CMarketData   : 6 tickers CAC40 chargés
+  CApp → CConfig       : taux sans risque 3.5%, devise EUR
+  CApp → CPricingEngine: moteur Black-Scholes prêt
+  CApp → CDatabase     : connexion Access ouverte
+  CApp → CBlotter      : feuille Blotter liée
+      </code></pre>
+      <p style="margin-top:1rem;color:var(--fo-muted);font-size:0.9rem">
+        ✅ En <strong>une seule ligne</strong> <code>Dim app As New CApp</code>, tout le système est opérationnel. C'est la puissance de l'architecture OOP.
+      </p>
+    </div>
+
+    <!-- 08h15 -->
+    <div class="card" style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <span style="font-size:1.8rem">📞</span>
+        <div>
+          <h3>08h15 — Appel client : un CALL sur TotalEnergies</h3>
+          <span style="font-size:0.8rem;color:var(--fo-muted)">Un client institutionnel veut acheter une option</span>
+        </div>
+      </div>
+      <p style="margin-bottom:1rem">Un gérant d'actifs appelle : <em>"Je veux un CALL TotalEnergies, strike 60€, maturité 3 mois, nominal 100 000€. Quel prix ?"</em></p>
+      <p style="margin-bottom:1rem">Sophie ouvre le <strong>Deal Ticket</strong> et saisit en 30 secondes :</p>
+      <div class="grid grid-2" style="gap:1rem;margin-bottom:1rem">
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5">
+          <div style="color:var(--fo-gold);margin-bottom:0.5rem">Deal Ticket — Saisie</div>
+          <div>Underlying  : <span style="color:var(--fo-green)">TTE.PA</span></div>
+          <div>Type        : <span style="color:var(--fo-green)">CALL</span></div>
+          <div>Style       : <span style="color:var(--fo-green)">EU</span></div>
+          <div>Strike      : <span style="color:var(--fo-amber)">60.00 €</span></div>
+          <div>Maturity    : <span style="color:var(--fo-amber)">09/06/2026</span></div>
+          <div>Notional    : <span style="color:var(--fo-amber)">100 000 €</span></div>
+          <div>Buy/Sell    : <span style="color:var(--fo-green)">BUY</span></div>
+        </div>
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5">
+          <div style="color:var(--fo-gold);margin-bottom:0.5rem">Résultats — Après clic PRICER</div>
+          <div>Prix    : <span style="color:var(--fo-green)">2.4436 EUR</span></div>
+          <div>Delta   : <span style="color:var(--fo-amber)">0.4672</span></div>
+          <div>Gamma   : <span style="color:var(--fo-amber)">0.0542</span></div>
+          <div>Vega    : <span style="color:var(--fo-amber)">0.1159</span></div>
+          <div>Theta   : <span style="color:var(--fo-red)">-0.0182</span></div>
+          <div>Rho     : <span style="color:var(--fo-amber)">0.0626</span></div>
+        </div>
+      </div>
+      <p style="color:var(--fo-muted);font-size:0.9rem">
+        ✅ Sophie annonce au client : <em>"2.44€ par action. Nominal 100 000€ = 1 712 actions (100 000 ÷ 58.40€). Coût total de l'option : 2.4436 × 1 712 ≈ <strong>4 183€</strong>."</em>
+        Le pricing est <strong>automatiquement sauvegardé</strong> dans Access. Zéro ressaisie, zéro oubli.
+      </p>
+    </div>
+
+    <!-- 10h30 -->
+    <div class="card" style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <span style="font-size:1.8rem">📉</span>
+        <div>
+          <h3>10h30 — TotalEnergies chute de 3%</h3>
+          <span style="font-size:0.8rem;color:var(--fo-muted)">Choc de marché — impact sur les Greeks</span>
+        </div>
+      </div>
+      <p style="margin-bottom:1rem">TTE.PA passe de <strong>58.40€ → 56.65€</strong> suite à une annonce macro. Sophie doit immédiatement repriser l'option avec le nouveau spot.</p>
+      <p style="margin-bottom:1rem">Elle met à jour <code>CMarketData</code> (spot mis à jour) et reclique <strong>PRICER</strong> :</p>
+      <div style="background:var(--fo-dark);border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1rem">
+        <div style="color:var(--fo-red);margin-bottom:0.5rem">⚠️ Impact du choc — Delta = 0.4666</div>
+        <div>Variation spot : 58.40 → 56.65€ = <span style="color:var(--fo-red)">-1.75€</span></div>
+        <div>Perte/action   : 0.4666 × (-1.75€) = <span style="color:var(--fo-red)">-0.817€ par action</span></div>
+        <div>Nb actions     : 100 000€ ÷ 58.40€ = <span style="color:var(--fo-amber)">1 712 actions</span></div>
+        <div>P&amp;L estimé : -0.817€ × 1 712 = <span style="color:var(--fo-red)">-1 398€</span></div>
+        <div>Nouveau prix   : <span style="color:var(--fo-amber)">1.697 EUR</span></div>
+        <div>Nouveau Delta  : <span style="color:var(--fo-amber)">0.372</span></div>
+      </div>
+      <p style="color:var(--fo-muted);font-size:0.9rem">
+        ✅ Grâce au Delta (0.4666), Sophie savait <em>avant même de repriser</em> que la perte serait d'environ <strong>1 400€</strong> sur son nominal de 100 000€.
+        C'est l'utilité concrète des Greeks au quotidien.
+      </p>
+    </div>
+
+    <!-- 14h00 -->
+    <div class="card amber" style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <span style="font-size:1.8rem">📊</span>
+        <div>
+          <h3 style="color:var(--fo-gold)">14h00 — Revue du Blotter</h3>
+          <span style="font-size:0.8rem;color:var(--fo-muted)">Point quotidien avec le responsable desk</span>
+        </div>
+      </div>
+      <p style="margin-bottom:1rem">Le responsable du desk demande un état des positions. Sophie clique sur <strong>BLOTTER</strong> — en 2 secondes, toutes les positions du jour s'affichent :</p>
+      <div style="background:var(--fo-dark);border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.78rem;color:#B0BEC5;overflow-x:auto">
+        <div style="color:var(--fo-gold);margin-bottom:0.5rem">Blotter — Positions du jour</div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr style="color:var(--fo-amber);border-bottom:1px solid #333">
+            <td style="padding:4px 8px">Underlying</td>
+            <td style="padding:4px 8px">Type</td>
+            <td style="padding:4px 8px">Strike</td>
+            <td style="padding:4px 8px">Prix</td>
+            <td style="padding:4px 8px">Delta</td>
+            <td style="padding:4px 8px">Theta</td>
+          </tr>
+          <tr style="color:var(--fo-green)">
+            <td style="padding:4px 8px">TTE.PA</td>
+            <td style="padding:4px 8px">CALL</td>
+            <td style="padding:4px 8px">60</td>
+            <td style="padding:4px 8px">2.4436</td>
+            <td style="padding:4px 8px">0.4672</td>
+            <td style="padding:4px 8px">-0.0182</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 8px">TTE.PA</td>
+            <td style="padding:4px 8px">PUT</td>
+            <td style="padding:4px 8px">60</td>
+            <td style="padding:4px 8px">3.5040</td>
+            <td style="padding:4px 8px">-0.5336</td>
+            <td style="padding:4px 8px">-0.0126</td>
+          </tr>
+          <tr style="color:var(--fo-amber)">
+            <td style="padding:4px 8px" colspan="4">Delta net portefeuille :</td>
+            <td style="padding:4px 8px">-0.0664</td>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+      <p style="margin-top:1rem;color:var(--fo-muted);font-size:0.9rem">
+        ✅ Delta net ≈ 0 → portefeuille quasi <strong>delta-neutre</strong>. Sophie informe son responsable : <em>"On est flat delta sur TTE."</em>
+      </p>
+    </div>
+
+    <!-- 14h30 VaR -->
+    <div style="border:2px solid var(--fo-amber);border-radius:12px;margin-bottom:2rem;overflow:hidden">
+
+      <div style="background:var(--fo-dark);padding:1.2rem 1.5rem;border-bottom:2px solid var(--fo-amber)">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span style="font-size:1.8rem">📐</span>
+          <div>
+            <h3 style="color:var(--fo-gold);margin:0">14h30 — Rapport VaR — Réunion Risk Committee</h3>
+            <span style="font-size:0.8rem;color:var(--fo-muted)">Sophie doit présenter le risque du portefeuille en 15 minutes</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:1.5rem">
+
+        <!-- Contexte -->
+        <p style="margin-bottom:1.2rem">Le responsable des risques appelle : <em>"Sophie, risk committee dans 15 minutes. Il me faut la VaR du portefeuille — les 3 méthodes."</em> Avant CommandoQuant, c'était 2 heures de travail. Maintenant : <strong>1 clic.</strong></p>
+
+        <!-- Clic BtnVaR -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1.2rem">
+          <div style="color:var(--fo-gold);margin-bottom:0.5rem">Sophie clique sur le bouton "Calculer VaR" dans le Blotter :</div>
+          <div style="color:#546E7A">' Excel appelle Shell → Python démarre en arrière-plan</div>
+          <div style="margin-top:0.3rem">StatusBar : <span style="color:var(--fo-amber)">"Calcul en cours (10 000 simulations)..."</span></div>
+          <div style="color:#546E7A">' 10 secondes plus tard — var_results.xlsx créé</div>
+          <div style="color:#546E7A">' VBA lit les résultats et ouvre la feuille "VaR"</div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="grid grid-3" style="gap:1rem;margin-bottom:1.2rem">
+          <div style="background:var(--fo-dark);border:2px solid #1565C0;border-radius:10px;padding:1.2rem;text-align:center">
+            <div style="color:#42A5F5;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px">Paramétrique</div>
+            <div style="font-size:1.8rem;font-weight:900;color:var(--fo-red);font-family:var(--font-mono);margin:0.4rem 0">3 677 €</div>
+            <div style="color:#78909C;font-size:0.75rem">Δ seul · analytique · &lt; 1ms</div>
+          </div>
+          <div style="background:var(--fo-dark);border:2px solid var(--fo-amber);border-radius:10px;padding:1.2rem;text-align:center">
+            <div style="color:var(--fo-amber);font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px">Monte Carlo</div>
+            <div style="font-size:1.8rem;font-weight:900;color:var(--fo-red);font-family:var(--font-mono);margin:0.4rem 0">3 545 €</div>
+            <div style="color:#78909C;font-size:0.75rem">Δ + Γ · 10 000 simul · ~10s</div>
+          </div>
+          <div style="background:var(--fo-dark);border:2px solid #00897B;border-radius:10px;padding:1.2rem;text-align:center">
+            <div style="color:#4DB6AC;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px">Historique</div>
+            <div style="font-size:1.8rem;font-weight:900;color:#4DB6AC;font-family:var(--font-mono);margin:0.4rem 0">111 €</div>
+            <div style="color:#78909C;font-size:0.75rem">Crises réelles · 25 scén.</div>
+          </div>
+        </div>
+
+        <!-- Analyse de Sophie -->
+        <div style="background:var(--fo-dark);border-left:4px solid var(--fo-gold);border-radius:0 8px 8px 0;padding:1.2rem;margin-bottom:1.2rem">
+          <div style="color:var(--fo-gold);font-weight:700;margin-bottom:0.8rem">Sophie analyse les 3 chiffres — 3 minutes de lecture</div>
+          <div style="font-size:0.88rem;color:#B0BEC5;line-height:1.9">
+            <div><span style="color:#42A5F5">→ Paramétrique 3 677€</span> : estimation rapide via Delta seul. Ignore la convexité. C'est le plancher de risque.</div>
+            <div><span style="color:var(--fo-amber)">→ Monte Carlo 3 545€</span> : plus précis, inclut le Gamma. Légèrement inférieur au Paramétrique car l'effet Gamma est positif ici (Long Gamma). <strong>C'est le chiffre à reporter.</strong></div>
+            <div><span style="color:#4DB6AC">→ Historique 111€</span> : très faible — ce n'est pas un bug. Le portefeuille est quasi <strong>delta-neutre</strong> (3 CALLs + 3 PUTs). Quand toutes les actions chutent du même pourcentage, les PUTs compensent les CALLs.</div>
+          </div>
+        </div>
+
+        <!-- Calcul delta net -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1.2rem">
+          <div style="color:var(--fo-amber)">Sophie vérifie le Delta net du portefeuille :</div>
+          <div style="margin-top:0.5rem">CALLs (Δ positif) : TTE +0.51 + SAN +0.56 + AIR +0.57 = <span style="color:var(--fo-green)">+1.64</span></div>
+          <div>PUTs  (Δ négatif) : OR  -0.98 + MC  -0.47 + BNP -0.36 = <span style="color:var(--fo-red)">-1.81</span></div>
+          <div style="border-top:1px solid #37474F;padding-top:0.5rem;margin-top:0.5rem">
+            <span style="color:var(--fo-gold)">Delta net = -0.17 → portefeuille quasi delta-neutre ✅</span>
+          </div>
+          <div style="margin-top:0.3rem;color:#546E7A">' Résultat : en cas de choc uniforme sur tous les sous-jacents,</div>
+          <div style="color:#546E7A">'            gains sur PUTs ≈ pertes sur CALLs → perte nette minime</div>
+        </div>
+
+        <!-- Décision -->
+        <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.3);border-radius:8px;padding:1rem;margin-bottom:1.2rem">
+          <div style="font-weight:700;color:var(--fo-green);margin-bottom:0.5rem">Décision de Sophie — Risk Committee 14h45</div>
+          <p style="color:var(--fo-muted);font-size:0.9rem;margin:0">
+            <em>"VaR Monte Carlo : <strong style="color:var(--fo-red)">3 545€ par jour</strong> à 95% de confiance. Le portefeuille est delta-neutre, bien hedgé. Pas d'action corrective nécessaire. Je transmets le rapport Excel pour les régulateurs."</em>
+          </p>
+        </div>
+
+        <!-- Ce qui aurait pris 2h avant -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1rem">
+          <div style="color:var(--fo-muted);font-size:0.82rem;font-style:italic">
+            Avant CommandoQuant : extraire les données Access manuellement → copier dans Excel → programmer les 3 formules VaR → formater le rapport → 2h de travail. Avec CommandoQuant : <strong style="color:var(--fo-green)">1 clic + 10 secondes.</strong>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 16h00 Greeks Dashboard -->
+    <div style="border:2px solid #1565C0;border-radius:12px;margin-bottom:2rem;overflow:hidden">
+
+      <div style="background:var(--fo-dark);padding:1.2rem 1.5rem;border-bottom:2px solid #1565C0">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span style="font-size:1.8rem">🔬</span>
+          <div>
+            <h3 style="color:#42A5F5;margin:0">16h00 — Greeks Dashboard — Surveillance des sensibilités</h3>
+            <span style="font-size:0.8rem;color:var(--fo-muted)">Le chef de desk demande les Greeks agrégés du portefeuille global</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:1.5rem">
+
+        <p style="margin-bottom:1.2rem">Le chef de desk passe derrière Sophie : <em>"Dis-moi où on en est sur les Greeks — Delta net, Vega, Theta. Je veux voir si on est exposé quelque part."</em> Sophie ouvre la feuille <strong>Greeks Dashboard</strong> — tout est agrégé automatiquement depuis la base Access.</p>
+
+        <!-- Tableau Greeks agrégés -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1.2rem;overflow-x:auto">
+          <div style="color:var(--fo-gold);margin-bottom:0.8rem">Greeks agrégés — Portefeuille 6 positions (Notional 100 000€ chacune)</div>
+          <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+            <tr style="color:var(--fo-amber);border-bottom:1px solid #37474F">
+              <td style="padding:5px 10px">Greek</td>
+              <td style="padding:5px 10px;text-align:right">Valeur agrégée</td>
+              <td style="padding:5px 10px;text-align:right">En euros</td>
+              <td style="padding:5px 10px">Interprétation</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-gold)">Δ Delta net</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">−0.17</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">≈ −0€</td>
+              <td style="padding:5px 10px;color:#78909C">Quasi delta-neutre ✅ — légèrement short</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-gold)">Γ Gamma total</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">+0.224</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">Long Gamma</td>
+              <td style="padding:5px 10px;color:#78909C">Bénéficie des gros mouvements ✅</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-gold)">ν Vega total</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-amber)">+0.842</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-amber)">+84€ / +1% vol</td>
+              <td style="padding:5px 10px;color:#78909C">Exposé à la hausse de volatilité ⚠️</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-gold)">Θ Theta total</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-red)">−0.083</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-red)">−83€ / jour</td>
+              <td style="padding:5px 10px;color:#78909C">Coûte 83€ chaque jour qui passe ⚠️</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 10px;color:var(--fo-gold)">ρ Rho total</td>
+              <td style="padding:5px 10px;text-align:right;color:#78909C">−0.042</td>
+              <td style="padding:5px 10px;text-align:right;color:#78909C">−4€ / +1% taux</td>
+              <td style="padding:5px 10px;color:#78909C">Faible exposition taux ✅</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Alertes visuelles -->
+        <div class="grid grid-2" style="gap:1rem;margin-bottom:1.2rem">
+          <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.3);border-radius:8px;padding:1rem">
+            <div style="font-weight:700;color:var(--fo-green);margin-bottom:0.5rem">✅ Positions saines</div>
+            <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.9;padding-left:1rem;margin:0">
+              <li>Delta net ≈ 0 → pas d'exposition directionnelle</li>
+              <li>Gamma positif → profite des gros mouvements</li>
+              <li>Rho faible → peu sensible aux taux BCE</li>
+            </ul>
+          </div>
+          <div style="background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.3);border-radius:8px;padding:1rem">
+            <div style="font-weight:700;color:var(--fo-red);margin-bottom:0.5rem">⚠️ Points de vigilance</div>
+            <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.9;padding-left:1rem;margin:0">
+              <li>Theta : −83€/jour → en 30 jours = −2 490€ de decay</li>
+              <li>Vega élevé → si vol chute brutalement (marché calme), perte sur les options</li>
+              <li>Trade-off classique : Long Gamma / Short Theta</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Décision desk -->
+        <div style="background:var(--fo-dark);border-left:4px solid #42A5F5;border-radius:0 8px 8px 0;padding:1.2rem">
+          <div style="color:#42A5F5;font-weight:700;margin-bottom:0.5rem">Chef de desk :</div>
+          <p style="color:#B0BEC5;font-size:0.9rem;margin:0"><em>"OK Sophie. Le Theta de 83€/jour, c'est notre coût de portage. Si les marchés restent calmes 2 semaines, on perd 1 200€ sur le temps — acceptable sur un notional de 600K€. On conserve les positions."</em></p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 16h45 Stress Test -->
+    <div style="border:2px solid #7B1FA2;border-radius:12px;margin-bottom:2rem;overflow:hidden">
+
+      <div style="background:var(--fo-dark);padding:1.2rem 1.5rem;border-bottom:2px solid #7B1FA2">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span style="font-size:1.8rem">🌊</span>
+          <div>
+            <h3 style="color:#CE93D8;margin:0">16h45 — Stress Test — "Et si TTE.PA chutait de 15% demain ?"</h3>
+            <span style="font-size:0.8rem;color:var(--fo-muted)">Simulation d'un choc extrême avant la clôture</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:1.5rem">
+
+        <p style="margin-bottom:1.2rem">Un analyste macro publie une note : risque de correction sectorielle sur l'énergie. Sophie veut savoir <em>"si TTE chutait de 15% en une seule séance, quel serait l'impact exact sur le portefeuille ?"</em></p>
+
+        <!-- Scénario choc -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1.2rem">
+          <div style="color:#CE93D8;margin-bottom:0.8rem">Scénario stress : TTE.PA −15% → 58.40 × (1 − 0.15) = 49.64€</div>
+          <div style="color:var(--fo-amber)">Impact sur la position TTE.PA CALL K=60 :</div>
+          <div style="margin-top:0.3rem">dS = 58.40 × (−0.15) = <span style="color:var(--fo-red)">−8.76€</span></div>
+          <div>nb_actions = 100 000 ÷ 58.40 = 1 712</div>
+          <div style="margin-top:0.3rem">Terme Delta : 0.5128 × (−8.76) × 1 712 = <span style="color:var(--fo-red)">−7 687€</span></div>
+          <div>Terme Gamma : 0.5 × 0.049 × (−8.76)² × 1 712 = <span style="color:var(--fo-green)">+3 145€</span></div>
+          <div style="border-top:1px solid #37474F;padding-top:0.5rem;margin-top:0.5rem">P&amp;L TTE CALL = −7 687 + 3 145 = <span style="color:var(--fo-red)">−4 542€</span></div>
+          <div style="margin-top:0.8rem;color:var(--fo-amber)">Mais TTE.PA PUT K=60 (position du portefeuille) :</div>
+          <div>Terme Delta : −0.5336 × (−8.76) × 1 712 = <span style="color:var(--fo-green)">+7 993€</span></div>
+          <div>Terme Gamma : 0.5 × 0.049 × (−8.76)² × 1 712 = <span style="color:var(--fo-green)">+3 145€</span></div>
+          <div style="border-top:1px solid #37474F;padding-top:0.5rem;margin-top:0.5rem">P&amp;L TTE PUT = +7 993 + 3 145 = <span style="color:var(--fo-green)">+11 138€</span></div>
+          <div style="border-top:2px solid var(--fo-gold);padding-top:0.5rem;margin-top:0.5rem;color:var(--fo-gold)">P&amp;L net TTE (CALL + PUT) = −4 542 + 11 138 = <strong>+6 596€</strong> ← le PUT protège !</div>
+        </div>
+
+        <!-- Tableau choc global -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.8rem;color:#B0BEC5;margin-bottom:1.2rem;overflow-x:auto">
+          <div style="color:var(--fo-gold);margin-bottom:0.8rem">Stress Test global portefeuille — choc −15% uniquement sur TTE.PA</div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="color:var(--fo-amber);border-bottom:1px solid #37474F">
+              <td style="padding:4px 10px">Position</td>
+              <td style="padding:4px 10px;text-align:right">Choc dS</td>
+              <td style="padding:4px 10px;text-align:right">P&amp;L</td>
+              <td style="padding:4px 10px">Commentaire</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:4px 10px">TTE.PA CALL K=60</td>
+              <td style="padding:4px 10px;text-align:right;color:var(--fo-red)">−8.76€</td>
+              <td style="padding:4px 10px;text-align:right;color:var(--fo-red)">−4 542€</td>
+              <td style="padding:4px 10px;color:#78909C">CALL perd — spot sous le strike</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:4px 10px">TTE.PA PUT K=60</td>
+              <td style="padding:4px 10px;text-align:right;color:var(--fo-red)">−8.76€</td>
+              <td style="padding:4px 10px;text-align:right;color:var(--fo-green)">+11 138€</td>
+              <td style="padding:4px 10px;color:#78909C">PUT gagne massivement (couverture)</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:4px 10px">BNP, SAN, MC, AIR, OR</td>
+              <td style="padding:4px 10px;text-align:right;color:#546E7A">0€</td>
+              <td style="padding:4px 10px;text-align:right;color:#546E7A">0€</td>
+              <td style="padding:4px 10px;color:#78909C">Non affectées (choc TTE seul)</td>
+            </tr>
+            <tr style="border-top:2px solid var(--fo-gold)">
+              <td style="padding:6px 10px;color:var(--fo-gold);font-weight:700">TOTAL PORTEFEUILLE</td>
+              <td style="padding:6px 10px"></td>
+              <td style="padding:6px 10px;text-align:right;color:var(--fo-green);font-weight:700;font-size:1rem">+6 596€</td>
+              <td style="padding:6px 10px;color:var(--fo-green)">Le PUT couvre la chute ✅</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Conclusion -->
+        <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.3);border-radius:8px;padding:1rem;margin-bottom:1.2rem">
+          <div style="font-weight:700;color:var(--fo-green);margin-bottom:0.5rem">Conclusion du stress test</div>
+          <p style="color:var(--fo-muted);font-size:0.9rem;margin:0">
+            Même en cas de chute violente de −15% sur TTE.PA, le portefeuille <strong style="color:var(--fo-green)">gagne +6 596€</strong> grâce au PUT qui joue son rôle de couverture. C'est exactement la valeur des options comme instrument de protection : la perte sur le CALL est plus que compensée par le gain sur le PUT, et le Gamma positif amplifie les gains en cas de gros mouvement.
+          </p>
+        </div>
+
+        <div style="background:var(--fo-dark);border-left:4px solid #CE93D8;border-radius:0 8px 8px 0;padding:1rem">
+          <div style="color:#CE93D8;font-weight:700;margin-bottom:0.3rem">Sophie à l'analyste macro :</div>
+          <p style="color:#B0BEC5;font-size:0.9rem;margin:0"><em>"Un choc −15% sur TTE nous rapporterait +6 600€. On est bien couvert. Pas de raison de dénouer les positions."</em></p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 17h00 P&L Simulator -->
+    <div style="border:2px solid #00897B;border-radius:12px;margin-bottom:2rem;overflow:hidden">
+
+      <div style="background:var(--fo-dark);padding:1.2rem 1.5rem;border-bottom:2px solid #00897B">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <span style="font-size:1.8rem">🧮</span>
+          <div>
+            <h3 style="color:#4DB6AC;margin:0">17h00 — P&L Simulator — "Et si le marché bougeait de X% ?"</h3>
+            <span style="font-size:0.8rem;color:var(--fo-muted)">Simulation interactive — pas besoin de relancer Python</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:1.5rem">
+
+        <p style="margin-bottom:1.2rem">Avant de quitter le desk, Sophie veut tester plusieurs scénarios rapidement : <em>"Et si toutes les actions du portefeuille montaient de +3% demain ? Et si elles chutaient de −8% ?"</em> Elle ouvre le <strong>P&L Simulator</strong> — une cellule Excel, un clic, le résultat est immédiat.</p>
+
+        <!-- Concept -->
+        <div style="background:var(--fo-dark);border-left:4px solid #4DB6AC;border-radius:0 8px 8px 0;padding:1.2rem;margin-bottom:1.2rem">
+          <div style="color:#4DB6AC;font-weight:700;margin-bottom:0.8rem">La formule derrière le simulateur — Taylor ordre 2</div>
+          <div style="font-family:var(--font-mono);font-size:0.9rem;color:#B0BEC5;line-height:2">
+            <div style="color:var(--fo-gold)">P&L = ( Δ × dS  +  ½ × Γ × dS² ) × Qty</div>
+            <div style="color:#546E7A;margin-top:0.3rem">où dS = Spot × choc%</div>
+            <div style="margin-top:0.5rem">→ Le terme <span style="color:var(--fo-amber)">Δ × dS</span> capture l'effet <strong>linéaire</strong> (direction du mouvement)</div>
+            <div>→ Le terme <span style="color:var(--fo-green)">½ × Γ × dS²</span> capture l'effet <strong>convexe</strong> (accélération — toujours positif si Long Gamma)</div>
+          </div>
+        </div>
+
+        <!-- 3 scénarios testés -->
+        <div style="background:var(--fo-dark);border-radius:8px;padding:1.2rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1.2rem;overflow-x:auto">
+          <div style="color:var(--fo-gold);margin-bottom:0.8rem">Sophie teste 3 chocs successivement dans la cellule D4 :</div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr style="color:var(--fo-amber);border-bottom:1px solid #37474F">
+              <td style="padding:5px 10px">Choc saisi</td>
+              <td style="padding:5px 10px;text-align:right">P&amp;L total</td>
+              <td style="padding:5px 10px">Interprétation</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-green)">+3%</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">+312€</td>
+              <td style="padding:5px 10px;color:#78909C">CALLs gagnent + PUTs perdent légèrement · net positif (Gamma)</td>
+            </tr>
+            <tr style="border-bottom:1px solid #263238">
+              <td style="padding:5px 10px;color:var(--fo-red)">−5%</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">+189€</td>
+              <td style="padding:5px 10px;color:#78909C">PUTs couvrent · delta-neutre → très faible perte</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 10px;color:var(--fo-red)">−10%</td>
+              <td style="padding:5px 10px;text-align:right;color:var(--fo-green)">+1 840€</td>
+              <td style="padding:5px 10px;color:#78909C">Gros mouvement → Gamma joue fort · PUTs très ITM</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Insight Gamma -->
+        <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.3);border-radius:8px;padding:1rem;margin-bottom:1.2rem">
+          <div style="font-weight:700;color:var(--fo-green);margin-bottom:0.5rem">Insight clé — La convexité travaille pour Sophie</div>
+          <p style="color:var(--fo-muted);font-size:0.9rem;margin:0">
+            Qu'il monte ou qu'il baisse, le marché génère un <strong>gain Gamma</strong> (terme ½ × Γ × dS² toujours positif). Plus le mouvement est grand, plus ce gain est important. C'est le bénéfice d'être <strong>Long Gamma</strong> : on profite des chocs dans les deux sens.
+            Le seul coût est le Theta (−83€/jour) : si le marché reste totalement plat, Sophie perd de la valeur temps.
+          </p>
+        </div>
+
+        <!-- Différence P&L Sim vs VaR -->
+        <div class="grid grid-2" style="gap:1rem">
+          <div style="background:var(--fo-dark);border-radius:8px;padding:1rem">
+            <div style="color:var(--fo-amber);font-weight:700;margin-bottom:0.5rem">P&L Simulator (Step 9)</div>
+            <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.9;padding-left:1rem;margin:0">
+              <li>Choc <strong>custom</strong> saisi à la main (ex: −5%)</li>
+              <li>Même choc appliqué à <strong>toutes</strong> les actions</li>
+              <li>Calcul instantané — pas Python</li>
+              <li>Idéal pour tester un scénario de marché plausible</li>
+            </ul>
+          </div>
+          <div style="background:var(--fo-dark);border-radius:8px;padding:1rem">
+            <div style="color:#CE93D8;font-weight:700;margin-bottom:0.5rem">Stress Test interactif (Step 10 — à venir)</div>
+            <ul style="font-size:0.85rem;color:var(--fo-muted);line-height:1.9;padding-left:1rem;margin:0">
+              <li>Scénario <strong>historique</strong> choisi en liste déroulante</li>
+              <li>Choc <strong>différent par action</strong> (TTE −12%, BNP −18%...)</li>
+              <li>Reproduit une vraie crise passée</li>
+              <li>Exigé par Bâle III / FRTB pour le risk committee</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 17h30 -->
+    <div class="card" style="margin-bottom:2rem">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+        <span style="font-size:1.8rem">🌇</span>
+        <div>
+          <h3>17h30 — Clôture des marchés</h3>
+          <span style="font-size:0.8rem;color:var(--fo-muted)">Archivage automatique de la journée</span>
+        </div>
+      </div>
+      <p style="margin-bottom:1rem">À la clôture, tous les pricings de la journée sont déjà en base Access. Le rapport VaR est archivé. Sophie exporte le Blotter pour le rapport de fin de journée. Zéro travail manuel supplémentaire.</p>
+      <div style="background:var(--fo-dark);border-radius:8px;padding:1rem;font-family:var(--font-mono);font-size:0.82rem;color:#B0BEC5;margin-bottom:1rem">
+        <div style="color:var(--fo-gold);margin-bottom:0.5rem">Bilan de la journée :</div>
+        <div>08h15  → CALL TTE.PA pricé et sauvegardé en base        ✅</div>
+        <div>10h30  → Repricing choc −3% — P&amp;L estimé −1 398€       ✅</div>
+        <div>14h00  → Blotter 6 positions présenté au desk             ✅</div>
+        <div>14h30  → VaR 3 méthodes calculée en 10s — Risk Committee   ✅</div>
+        <div>16h00  → Greeks Dashboard — Delta net, Theta, Vega agrégés  ✅</div>
+        <div>16h45  → Stress Test −15% TTE → portefeuille +6 596€        ✅</div>
+        <div>17h00  → P&amp;L Simulator — 3 scénarios testés en 3 clics   ✅</div>
+        <div>17h30  → Clôture — tout archivé automatiquement            ✅</div>
+      </div>
+      <p style="color:var(--fo-muted);font-size:0.9rem">
+        ✅ <strong>Gain de temps estimé</strong> : 45 min/jour vs. gestion manuelle Excel. Sur un mois : 15h récupérées pour du vrai travail d'analyse.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ VALEUR AJOUTÉE ════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Impact</span>
+      <h2>Ce que CommandoQuant change concrètement</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">⚡</div>
+        <h3>Rapidité</h3>
+        <p>Pricing en <strong>1 clic</strong>. Greeks calculés instantanément. Blotter mis à jour automatiquement après chaque deal.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">🔒</div>
+        <h3>Fiabilité</h3>
+        <p>Validation des données à la saisie (strike > 0, maturity future). Impossible d'entrer une option incohérente. Erreurs humaines éliminées.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🗃️</div>
+        <h3>Traçabilité</h3>
+        <p>Chaque pricing horodaté et sauvegardé en base. Historique complet consultable à tout moment. Audit trail natif.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ EVOLUTION ═════════════════════════════════════════════ -->
+<section class="section" style="background:var(--fo-light)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Roadmap Use Cases</span>
+      <h2>Prochains cas d'usage — à venir</h2>
+      <p>Au fur et à mesure que l'outil évolue, de nouveaux use cases seront documentés ici.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📐</div>
+        <h3>VaR Monte Carlo <span style="font-size:0.75rem;color:var(--fo-green);background:rgba(0,200,83,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">✅ LIVRÉ</span></h3>
+        <p>Sophie calcule la VaR en 3 méthodes via Python (10 000 simulations). Résultat : 3 545€/jour à 95%. <a href="theory.html" style="color:var(--fo-amber)">→ Voir Theory</a></p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">🔬</div>
+        <h3>Greeks Dashboard <span style="font-size:0.75rem;color:var(--fo-green);background:rgba(0,200,83,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">✅ LIVRÉ</span></h3>
+        <p>Delta net −0.17, Gamma +0.224, Theta −83€/jour, Vega +84€/1%vol. Chef de desk validé. <a href="theory.html#greeks" style="color:var(--fo-amber)">→ Voir Greeks</a></p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🌊</div>
+        <h3>Stress Test <span style="font-size:0.75rem;color:var(--fo-green);background:rgba(0,200,83,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">✅ LIVRÉ</span></h3>
+        <p>Choc −15% TTE.PA → portefeuille +6 596€ (PUT couvre). Portefeuille validé robuste. <a href="theory.html" style="color:var(--fo-amber)">→ Voir Theory</a></p>
+      </div>
+    </div>
+    <div class="grid grid-3" style="margin-top:1.5rem">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">🧮</div>
+        <h3>P&L Simulator <span style="font-size:0.75rem;color:var(--fo-green);background:rgba(0,200,83,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">✅ LIVRÉ</span></h3>
+        <p>Sophie tape un choc custom (−5%, +10%...) → P&L instantané par position via Taylor ordre 2. Sans relancer Python. <a href="theory.html#pnl" style="color:var(--fo-amber)">→ Voir Theory</a></p>
+      </div>
+      <div class="card fade-up delay-2" style="border:1px dashed var(--fo-amber)">
+        <div class="card-icon">🎯</div>
+        <h3>Stress Test interactif <span style="font-size:0.75rem;color:var(--fo-amber);background:rgba(255,140,0,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">🔄 EN COURS</span></h3>
+        <p>Sophie choisit un scénario historique (COVID, Lehman...) en liste déroulante → chocs différents par action → P&L réaliste par crise.</p>
+      </div>
+      <div class="card fade-up delay-3" style="border:1px dashed #555">
+        <div class="card-icon">📄</div>
+        <h3>Rapport automatique <span style="font-size:0.75rem;color:#78909C;background:rgba(120,144,156,0.1);padding:2px 8px;border-radius:12px;vertical-align:middle">⏳ PRÉVU</span></h3>
+        <p>Export automatique PDF/Excel avec VaR + Greeks + P&L du jour. Un clic pour le risk committee.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="background:var(--fo-dark);color:#B0BEC5;text-align:center;padding:2rem;font-size:0.85rem;border-top:2px solid var(--fo-amber)">
+  CommandoQuant · Quant Equity Risk Developer · Use Cases — mis à jour au fil du développement
+</footer>
+
+</body>
+</html>

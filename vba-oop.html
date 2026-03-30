@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OOP Lab — CommandoQuant · VBA Orienté Objet</title>
+<link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand"><span class="logo-dot"></span><span class="logo-dot"></span>CommandoQuant</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="business.html">Business</a></li>
+    <li><a href="workflow.html">Workflow</a></li>
+    <li><a href="architecture.html">Architecture</a></li>
+    <li><a href="datamodel.html">Data Model</a></li>
+    <li><a href="implementation.html">Implémentation</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="usecase.html">Use Case</a></li>
+    <li><a href="vba-oop.html" class="active">OOP Lab</a></li>
+    <li><a href="theory.html">Theory</a></li>
+    <li><a href="runbook.html" class="runbook-link">Runbook</a></li>
+  </ul>
+</nav>
+
+<div class="page-header">
+  <h1>🔬 OOP Lab — VBA Orienté Objet expliqué</h1>
+  <p>Comprendre exactement comment fonctionnent les classes VBA, l'encapsulation, l'héritage et l'appel hiérarchique — avec le vrai code de CommandoQuant</p>
+  <div class="breadcrumb">
+    <a href="index.html">Overview</a><span>›</span><span>OOP Lab</span>
+  </div>
+</div>
+
+<!-- ═══ POURQUOI OOP ══════════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Fondamentaux</span>
+      <h2>Pourquoi la programmation orientée objet ?</h2>
+      <p>La différence entre du code procédural (VBA classique) et du code orienté objet — avec le même exemple.</p>
+    </div>
+    <div class="grid grid-2">
+      <div class="card" style="border-left:4px solid var(--fo-red)">
+        <h3 style="color:var(--fo-red)">❌ VBA Procédural — le chaos</h3>
+        <p style="margin-bottom:1rem;font-size:0.88rem;color:var(--fo-muted)">Tout est à plat. N'importe qui modifie n'importe quoi.</p>
+        <pre><code style="font-size:0.8rem">
+Sub PricerOption()
+  Dim underlying As String
+  Dim strike As Double
+  Dim vol As Double
+  Dim spot As Double
+  Dim prix As Double
+  Dim delta As Double
+
+  underlying = "TTE.PA"
+  strike = 60.0
+  vol = 0.28
+  spot = 58.40
+  ' 50 variables éparpillées...
+  ' Qui gère la validation ?
+  ' Que se passe-t-il si strike = -5 ?
+  ' Rien ne l'empêche.
+  strike = -5  ' BUG silencieux
+End Sub</code></pre>
+      </div>
+      <div class="card amber">
+        <h3 style="color:var(--fo-gold)">✅ VBA OOP — la maîtrise</h3>
+        <p style="margin-bottom:1rem;font-size:0.88rem;color:var(--fo-muted)">Chaque classe protège ses données. La validation est intégrée.</p>
+        <pre><code style="font-size:0.8rem">
+Sub PricerOption()
+  Dim opt As New COption
+
+  opt.Underlying = "TTE.PA"
+  opt.Strike = 60.0   ' validé : doit être > 0
+
+  opt.Strike = -5
+  ' → Erreur 102 levée automatiquement
+  ' → "Strike doit être > 0"
+  ' → Impossible de corrompre les données
+
+  ' L'objet se protège lui-même.
+End Sub</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ANATOMIE D'UNE CLASSE ═════════════════════════════════ -->
+<section class="section" style="background:var(--fo-light)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Anatomie</span>
+      <h2>Anatomie d'une classe VBA — COption disséquée</h2>
+      <p>Chaque bloc de code a un rôle précis. Voici exactement ce qui se passe en mémoire.</p>
+    </div>
+
+    <!-- Champs privés -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3>1. Les champs privés — la mémoire interne</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        Ce sont les <strong>variables membres</strong> de l'objet. Déclarées <code>Private</code> → personne ne peut y accéder directement depuis l'extérieur.
+        La convention <code>m_</code> signale que c'est un membre (member).
+      </p>
+      <pre><code style="font-size:0.82rem">
+' === CHAMPS PRIVÉS ===
+Private m_underlying   As String   ' "TTE.PA" — inaccessible directement
+Private m_optionType   As String   ' "CALL" ou "PUT"
+Private m_strike       As Double   ' 60.00 — on ne peut pas écrire opt.m_strike
+
+' Ce que ça interdit :
+' opt.m_strike = -5   → Erreur de compilation, m_strike est Private</code></pre>
+      <div style="background:rgba(212,136,10,0.08);border:1px solid rgba(212,136,10,0.3);border-radius:8px;padding:1rem;margin-top:1rem">
+        <strong style="color:var(--fo-gold)">Principe : Encapsulation</strong>
+        <p style="font-size:0.88rem;margin-top:0.5rem;color:var(--fo-muted)">
+          Les données sont <em>cachées</em> à l'intérieur de la classe. On ne peut les lire/modifier QUE via les propriétés publiques — qui font la validation.
+        </p>
+      </div>
+    </div>
+
+    <!-- Constructeur -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3>2. Class_Initialize — le constructeur</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        S'exécute <strong>automatiquement</strong> quand tu fais <code>New COption</code>. C'est le constructeur VBA — il initialise les valeurs par défaut.
+      </p>
+      <pre><code style="font-size:0.82rem">
+Private Sub Class_Initialize()
+    m_state   = "SAISI"    ' état initial de l'option
+    m_style   = "EU"       ' européenne par défaut
+    m_buySell = "BUY"      ' achat par défaut
+End Sub
+
+' Ce qui se passe quand tu fais :
+Dim opt As New COption
+'         ↑
+'         Class_Initialize() est appelé automatiquement
+'         opt.State   = "SAISI"  sans que tu aies rien fait
+'         opt.Style   = "EU"
+'         opt.BuySell = "BUY"</code></pre>
+    </div>
+
+    <!-- Property Get/Let -->
+    <div class="card amber" style="margin-bottom:1.5rem">
+      <h3 style="color:var(--fo-gold)">3. Property Get / Let — les gardiens</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        Ce sont les <strong>accesseurs</strong>. <code>Get</code> = lire. <code>Let</code> = écrire avec validation.
+        C'est ici que la classe protège ses données.
+      </p>
+      <pre><code style="font-size:0.82rem">
+' LIRE (Get) — pas de validation nécessaire
+Public Property Get Strike() As Double
+    Strike = m_strike          ' retourne la valeur interne
+End Property
+
+' ÉCRIRE (Let) — validation obligatoire
+Public Property Let Strike(v As Double)
+    If v &lt;= 0 Then
+        Err.Raise vbObjectError + 102, "COption", "Strike doit être > 0"
+        '         ↑ numéro unique    ↑ source     ↑ message clair
+    End If
+    m_strike = v               ' stockage seulement si valide
+End Property
+
+' Utilisation :
+opt.Strike = 60.0    ' → Property Let Strike(60.0) → OK, m_strike = 60
+opt.Strike = -5      ' → Property Let Strike(-5)   → Err.Raise → exception
+Dim k = opt.Strike   ' → Property Get Strike()     → retourne 60.0</code></pre>
+    </div>
+
+    <!-- Propriété calculée -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3>4. Propriété calculée — Get sans Let</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        Pas de valeur stockée — calculée à la volée. Lecture seule : pas de <code>Let</code>.
+      </p>
+      <pre><code style="font-size:0.82rem">
+Public Property Get Maturity_Years() As Double
+    ' Calculé dynamiquement à chaque appel
+    ' Pas de m_maturity_years stocké en mémoire
+    Maturity_Years = (m_maturity - Date) / 365#
+End Property
+
+' Comportement :
+' opt.Maturity = 09/06/2026, aujourd'hui = 10/03/2026
+' opt.Maturity_Years → (09/06/2026 - 10/03/2026) / 365 = 0.252
+
+' Demain :
+' opt.Maturity_Years → (09/06/2026 - 11/03/2026) / 365 = 0.249
+' La valeur change automatiquement avec le temps !</code></pre>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ HIÉRARCHIE DE CLASSES ═════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Architecture</span>
+      <h2>La hiérarchie de classes — comment elles se parlent</h2>
+      <p>CApp est le chef d'orchestre. Elle crée et expose les sous-systèmes. C'est le pattern <strong>Composition</strong>.</p>
+    </div>
+
+    <div class="card amber" style="margin-bottom:1.5rem">
+      <h3 style="color:var(--fo-gold)">La RAM quand CApp est instanciée</h3>
+      <pre><code style="font-size:0.82rem">
+Dim app As New CApp
+' ↑ Cette seule ligne crée toute cette structure en RAM :
+
+RAM
+│
+└── app (CApp)                        ← objet racine
+    ├── m_config (CConfig)            ← sous-objet créé par CApp
+    │   └── m_params (Dictionary)
+    │       ├── "DEFAULT_RISK_FREE" → 0.035
+    │       ├── "DEFAULT_VOL"       → 0.25
+    │       ├── "LOT_SIZE"          → 100
+    │       └── "CURRENCY"          → "EUR"
+    │
+    ├── m_marketData (CMarketData)    ← sous-objet créé par CApp
+    │   └── m_spots (Dictionary)
+    │       ├── "TTE.PA" → 58.40
+    │       ├── "BNP.PA" → 72.15
+    │       └── ... (6 tickers)
+    │
+    ├── m_pricingEngine (CPricingEngine) ← sous-objet créé par CApp
+    │   └── (pas de données, que des méthodes)
+    │
+    ├── m_database (CDatabase)        ← sous-objet créé par CApp
+    │   └── m_conn (ADODB.Connection) → connexion Access ouverte
+    │
+    └── m_blotter (CBlotter)          ← sous-objet créé par CApp
+        └── m_ws (Worksheet)          → référence vers feuille Excel</code></pre>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3>L'appel hiérarchique — chaîne complète</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        Quand Sophie clique sur PRICER, voici exactement ce qui s'exécute, couche par couche :
+      </p>
+      <pre><code style="font-size:0.82rem">
+' BtnPricer appelle CApp
+app.MarketData.GetSpot("TTE.PA")
+'   ↑           ↑        ↑
+'   CApp        Property  méthode de CMarketData
+'               Get qui   qui cherche dans le
+'               retourne  Dictionary m_spots
+'               m_marketData
+
+' Décomposé :
+' 1. app               → objet CApp en RAM
+' 2. .MarketData       → Property Get MarketData() → retourne m_marketData
+' 3. .GetSpot("TTE.PA")→ méthode de CMarketData → cherche m_spots("TTE.PA") → 58.40
+
+' Même principe :
+app.Config.GetParam("DEFAULT_RISK_FREE")
+' 1. app               → CApp
+' 2. .Config           → retourne m_config (CConfig)
+' 3. .GetParam(...)    → cherche m_params("DEFAULT_RISK_FREE") → 0.035
+
+app.PricingEngine.Price(58.4, 60, 0.035, 0.28, 0.25, "CALL")
+' 1. app               → CApp
+' 2. .PricingEngine    → retourne m_pricingEngine (CPricingEngine)
+' 3. .Price(...)       → calcule Black-Scholes → 2.4436</code></pre>
+    </div>
+
+    <div class="card" style="margin-bottom:1.5rem">
+      <h3>Cycle de vie d'un objet — naissance et mort</h3>
+      <p style="margin-bottom:1rem;color:var(--fo-muted);font-size:0.9rem">
+        En VBA, les objets ont un cycle de vie géré automatiquement.
+      </p>
+      <pre><code style="font-size:0.82rem">
+Sub BtnPricer()
+    Dim app As New CApp    ' ← NAISSANCE : Class_Initialize() appelé
+    '                            CConfig, CMarketData, etc. créés en RAM
+    '                            Connexion Access ouverte
+
+    ' ... tout le code de pricing ...
+
+End Sub  ' ← MORT : quand app sort de portée
+         '    Class_Terminate() appelé automatiquement
+         '    Set m_config = Nothing → CConfig détruite
+         '    Set m_database = Nothing → connexion Access FERMÉE
+         '    Toute la RAM libérée proprement
+
+' VBA gère ça tout seul → pas de fuite mémoire si on utilise Class_Terminate</code></pre>
+      <div style="background:rgba(212,136,10,0.08);border:1px solid rgba(212,136,10,0.3);border-radius:8px;padding:1rem;margin-top:1rem">
+        <strong style="color:var(--fo-gold)">Principe : RAII (Resource Acquisition Is Initialization)</strong>
+        <p style="font-size:0.88rem;margin-top:0.5rem;color:var(--fo-muted)">
+          La connexion Access est ouverte à la création de CDatabase et fermée à sa destruction. Automatique. Propre. Zéro connexion orpheline.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ SINGLE RESPONSIBILITY ════════════════════════════════ -->
+<section class="section" style="background:var(--fo-light)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Principes SOLID</span>
+      <h2>Single Responsibility — chaque classe fait une seule chose</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📦</div>
+        <h3>COption</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> représenter une option avec ses paramètres contractuels + validation.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> pricer, accéder à la base, afficher dans Excel.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">⚙️</div>
+        <h3>CPricingEngine</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> calculer le prix Black-Scholes et les Greeks à partir de 5 paramètres.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> lire les données de marché, stocker quoi que ce soit.</p>
+      </div>
+      <div class="card fade-up delay-3">
+        <div class="card-icon">🗃️</div>
+        <h3>CDatabase</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> sauvegarder et lire des données dans Access via ADODB.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> pricer, afficher dans Excel, valider des options.</p>
+      </div>
+      <div class="card fade-up delay-1">
+        <div class="card-icon">📈</div>
+        <h3>CMarketData</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> fournir les prix de marché (spots, taux) — simulés ou connectés Bloomberg.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> pricer, calculer des Greeks.</p>
+      </div>
+      <div class="card fade-up delay-2">
+        <div class="card-icon">📊</div>
+        <h3>CBlotter</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> afficher les positions dans la feuille Excel Blotter.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> aller chercher les données elle-même — elle reçoit un CDatabase.</p>
+      </div>
+      <div class="card amber fade-up delay-3">
+        <div class="card-icon">🎯</div>
+        <h3>CApp</h3>
+        <p style="font-size:0.88rem;color:var(--fo-muted)"><strong>Fait :</strong> créer, initialiser et exposer tous les sous-systèmes. Chef d'orchestre.</p>
+        <p style="font-size:0.88rem;color:var(--fo-red);margin-top:0.5rem"><strong>Ne fait pas :</strong> aucune logique métier — elle délègue tout.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ERREURS ET GESTION ════════════════════════════════════ -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Robustesse</span>
+      <h2>Gestion des erreurs OOP — Err.Raise vs On Error</h2>
+    </div>
+    <div class="grid grid-2">
+      <div class="card" style="margin-bottom:1.5rem">
+        <h3>Dans la classe — lever une erreur</h3>
+        <pre><code style="font-size:0.82rem">
+' Dans COption.cls
+Public Property Let Strike(v As Double)
+    If v &lt;= 0 Then
+        Err.Raise _
+          vbObjectError + 102, _ ' numéro unique
+          "COption.Strike",    _ ' source
+          "Strike doit être > 0" ' message
+    End If
+    m_strike = v
+End Property
+
+' Règle : la classe lève l'erreur
+' Elle ne l'attrape PAS — c'est à l'appelant de gérer</code></pre>
+      </div>
+      <div class="card amber">
+        <h3 style="color:var(--fo-gold)">Dans l'appelant — attraper l'erreur</h3>
+        <pre><code style="font-size:0.82rem">
+' Dans BtnPricer ou TestModule
+Sub BtnPricer()
+    On Error GoTo ErrHandler   ' filet de sécurité
+
+    Dim opt As New COption
+    opt.Strike = CDbl(ws.Range("D6").Value)
+    ' Si la cellule contient -5 → COption lève Err 102
+    ' → On Error GoTo ErrHandler l'attrape ici
+
+    ' ... reste du code ...
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Erreur : " &amp; Err.Description, vbCritical
+    ' Affiche "Strike doit être > 0"
+End Sub</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ÉVOLUTION ═════════════════════════════════════════════ -->
+<section class="section" style="background:var(--fo-light)">
+  <div class="container">
+    <div class="section-header">
+      <span class="tag">Roadmap OOP Lab</span>
+      <h2>Prochains concepts à documenter</h2>
+      <p>Au fil du développement de l'outil, de nouveaux concepts OOP seront expliqués ici.</p>
+    </div>
+    <div class="grid grid-3">
+      <div class="card fade-up delay-1" style="opacity:0.6">
+        <div class="card-icon">🔗</div>
+        <h3>Interfaces VBA</h3>
+        <p>Simuler des interfaces avec <code>Implements</code> pour le polymorphisme. <span style="color:var(--fo-amber)">→ à venir</span></p>
+      </div>
+      <div class="card fade-up delay-2" style="opacity:0.6">
+        <div class="card-icon">🏭</div>
+        <h3>Pattern Factory</h3>
+        <p>Créer des objets COption selon leur type sans connaître la classe concrète. <span style="color:var(--fo-amber)">→ à venir</span></p>
+      </div>
+      <div class="card fade-up delay-3" style="opacity:0.6">
+        <div class="card-icon">📋</div>
+        <h3>Collections d'objets</h3>
+        <p>Gérer une liste de COption dans une Collection VBA — le Blotter avancé. <span style="color:var(--fo-amber)">→ à venir</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="background:var(--fo-dark);color:#B0BEC5;text-align:center;padding:2rem;font-size:0.85rem;border-top:2px solid var(--fo-amber)">
+  CommandoQuant · OOP Lab — VBA Orienté Objet · Mis à jour au fil du développement
+</footer>
+
+</body>
+</html>

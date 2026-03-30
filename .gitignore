@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+env/
+venv/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files
+*.xlsx
+*.xlsm
+*.accdb
+*.csv
+*.json
+
+# Logs
+*.log
+
+# VSCode
+.vscode/
+
+# Mac/Windows
+.DS_Store
+Thumbs.db
+
+# Untracked testing artifacts
+*.tmp
+
+# Build artifacts
+dist/
+build/
+
+# Python virtual environments
+.env/
+.venv/
+
+# Worker files
+tmp/
+
+# ignore generated docs if any
+docs/_build/
