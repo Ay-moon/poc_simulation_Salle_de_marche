@@ -1,14 +1,16 @@
-# Contributing to CommandoQuant
+# Contribuer à CommandoQuant
 
-Thank you for your interest in contributing.
+> **[Read this document in English](CONTRIBUTING.en.md)**
 
-## Ways to contribute
+Merci de votre intérêt pour contribuer à ce projet.
 
-- **Bug reports** — open an issue describing the problem and steps to reproduce
-- **Feature suggestions** — open an issue with the `enhancement` label
-- **Pull requests** — code improvements, new VaR methods, additional test cases
+## Façons de contribuer
 
-## Development setup
+- **Rapports de bugs** — ouvrez une issue en décrivant le problème et les étapes pour le reproduire
+- **Suggestions de fonctionnalités** — ouvrez une issue avec le label `enhancement`
+- **Pull requests** — améliorations du code, nouvelles méthodes VaR, cas de tests supplémentaires
+
+## Configuration de l'environnement de développement
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/CommandoQuant.git
@@ -16,27 +18,27 @@ cd CommandoQuant
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 pip install -r requirements.txt
-pytest tests/ -v              # all 30 tests must pass
+pytest tests/ -v              # les 30 tests doivent passer
 ```
 
-## Pull request process
+## Processus de pull request
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Make your changes
-4. Ensure all tests pass: `pytest tests/ -v`
-5. Open a pull request with a clear description
+1. Forkez le dépôt
+2. Créez une branche de fonctionnalité : `git checkout -b feature/nom-de-votre-fonctionnalite`
+3. Effectuez vos modifications
+4. Assurez-vous que tous les tests passent : `pytest tests/ -v`
+5. Ouvrez une pull request avec une description claire
 
-## Code style
+## Style de code
 
-- Python: follow PEP 8, keep docstrings in the existing style
-- Tests: add at least one test per new function
-- Comments: explain *why*, not just *what* — especially for financial formulas
+- Python : suivre PEP 8, conserver le style des docstrings existantes
+- Tests : ajouter au moins un test par nouvelle fonction
+- Commentaires : expliquer le *pourquoi*, pas seulement le *quoi* — surtout pour les formules financières
 
-## Roadmap ideas (V2)
+## Idées pour la feuille de route (V2)
 
-- Heston stochastic volatility model
-- Multi-asset correlation matrix for portfolio VaR
-- GitHub Actions CI (lint + tests on push)
-- Jupyter notebook walkthrough
-- FRTB SA sensitivity-based approach
+- Modèle de volatilité stochastique Heston
+- Matrice de corrélation multi-actifs pour la VaR de portefeuille
+- CI GitHub Actions (lint + tests au push)
+- Notebook Jupyter de présentation
+- Approche basée sur les sensibilités FRTB SA

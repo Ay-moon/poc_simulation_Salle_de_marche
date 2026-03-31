@@ -1,12 +1,12 @@
 """
 tests/test_var_engine.py
 ========================
-Unit tests for CommandoQuant VaR engine.
+Tests unitaires pour le moteur VaR CommandoQuant.
 
-These tests cover the pure mathematical functions in demo.py
-(no SQL Server required — standalone mode only).
+Ces tests couvrent les fonctions mathématiques pures de demo.py
+(aucun SQL Server requis — mode autonome uniquement).
 
-Run with:
+Lancer avec :
     pytest tests/ -v
     pytest tests/ -v --cov=demo --cov-report=term-missing
 """
@@ -16,7 +16,7 @@ import sys
 import os
 import pytest
 
-# Make sure demo.py is importable from the project root
+# Rend demo.py importable depuis la racine du projet
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from demo import (
@@ -34,7 +34,7 @@ from demo import (
 
 @pytest.fixture
 def single_call():
-    """A single long CALL position — simplest case."""
+    """Une seule position CALL longue — cas le plus simple."""
     return [{
         "underlying":  "TEST.PA",
         "option_type": "CALL",
@@ -51,7 +51,7 @@ def single_call():
 
 @pytest.fixture
 def mixed_book():
-    """A balanced book: 2 calls + 1 put across 2 underlyings."""
+    """Un portefeuille équilibré : 2 calls + 1 put sur 2 sous-jacents."""
     return [
         {"underlying": "AAA", "option_type": "CALL",
          "strike": 50.0, "spot": 52.0, "vol": 0.22,
@@ -72,7 +72,7 @@ def mixed_book():
 
 @pytest.fixture
 def zero_delta_position():
-    """A delta-neutral position (delta = 0) — VaR should be near zero."""
+    """Une position delta-neutre (delta = 0) — la VaR doit être proche de zéro."""
     return [{
         "underlying": "NEUTRAL", "option_type": "CALL",
         "strike": 100.0, "spot": 100.0, "vol": 0.20,
@@ -83,7 +83,7 @@ def zero_delta_position():
 
 @pytest.fixture
 def sample_csv_path():
-    """Path to the bundled sample positions CSV."""
+    """Chemin vers le CSV de positions exemples inclus dans le dépôt."""
     return os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data", "sample_positions.csv"
@@ -98,14 +98,14 @@ class TestLoadPositions:
 
     def test_loads_correct_row_count(self, sample_csv_path):
         positions = load_positions(sample_csv_path)
-        assert len(positions) == 10, "sample_positions.csv should have 10 rows"
+        assert len(positions) == 10, "sample_positions.csv doit contenir 10 lignes"
 
     def test_required_keys_present(self, sample_csv_path):
         positions = load_positions(sample_csv_path)
         required = {"underlying", "option_type", "strike", "spot",
                     "vol", "prix", "delta", "gamma", "vega", "notional"}
         for p in positions:
-            assert required.issubset(p.keys()), f"Missing keys in: {p}"
+            assert required.issubset(p.keys()), f"Clés manquantes dans : {p}"
 
     def test_numeric_fields_are_floats(self, sample_csv_path):
         positions = load_positions(sample_csv_path)
@@ -113,18 +113,18 @@ class TestLoadPositions:
         for p in positions:
             for field in numeric:
                 assert isinstance(p[field], float), \
-                    f"Field '{field}' should be float, got {type(p[field])}"
+                    f"Le champ '{field}' doit être float, obtenu {type(p[field])}"
 
     def test_option_types_are_valid(self, sample_csv_path):
         positions = load_positions(sample_csv_path)
         for p in positions:
             assert p["option_type"] in ("CALL", "PUT"), \
-                f"Invalid option_type: {p['option_type']}"
+                f"option_type invalide : {p['option_type']}"
 
     def test_spots_are_positive(self, sample_csv_path):
         positions = load_positions(sample_csv_path)
         for p in positions:
-            assert p["spot"] > 0, f"Spot must be > 0, got {p['spot']}"
+            assert p["spot"] > 0, f"Le spot doit être > 0, obtenu {p['spot']}"
 
 
 # ================================================================
@@ -138,29 +138,29 @@ class TestVarParametrique:
         assert var > 0
 
     def test_formula_single_position(self, single_call):
-        """Manually verify the parametric formula for a single position."""
+        """Vérifie manuellement la formule paramétrique pour une seule position."""
         p   = single_call[0]
-        nb  = p["notional"] / p["spot"]           # shares equivalent
-        sig = p["spot"] * VOL_DAILY                # 1-day spot sigma
-        exp = 1.6449 * abs(p["delta"] * nb * sig)  # expected VaR
+        nb  = p["notional"] / p["spot"]           # équivalent actions
+        sig = p["spot"] * VOL_DAILY                # sigma spot journalier
+        exp = 1.6449 * abs(p["delta"] * nb * sig)  # VaR attendue
 
         var = var_parametrique(single_call)
-        assert abs(var - exp) < 0.01, f"Expected ~{exp:.2f}, got {var:.2f}"
+        assert abs(var - exp) < 0.01, f"Attendu ~{exp:.2f}, obtenu {var:.2f}"
 
     def test_var_scales_with_notional(self, single_call):
-        """Doubling notional should double the VaR (linear in Delta)."""
+        """Doubler le notional doit doubler la VaR (linéaire en Delta)."""
         p2 = [{**single_call[0], "notional": single_call[0]["notional"] * 2}]
         var1 = var_parametrique(single_call)
         var2 = var_parametrique(p2)
-        assert abs(var2 / var1 - 2.0) < 1e-6, "VaR should scale linearly with notional"
+        assert abs(var2 / var1 - 2.0) < 1e-6, "La VaR doit être linéaire en notional"
 
     def test_delta_neutral_returns_zero(self, zero_delta_position):
-        """A delta-neutral position should have VaR = 0 under parametric method."""
+        """Une position delta-neutre doit avoir VaR = 0 avec la méthode paramétrique."""
         var = var_parametrique(zero_delta_position)
         assert var == pytest.approx(0.0, abs=1e-9)
 
     def test_call_vs_put_same_abs_delta(self):
-        """A CALL and PUT with same |delta| and same spot/notional → same VaR."""
+        """Un CALL et un PUT avec le même |delta| et même spot/notional → même VaR."""
         call = [{"underlying": "X", "option_type": "CALL",
                  "strike": 100.0, "spot": 100.0, "vol": 0.20,
                  "prix": 5.0, "delta":  0.50, "gamma": 0.04,
@@ -176,7 +176,7 @@ class TestVarParametrique:
         assert var > 0
 
     def test_ignores_zero_spot_positions(self):
-        """Positions with spot=0 should be silently skipped."""
+        """Les positions avec spot=0 doivent être ignorées silencieusement."""
         positions = [
             {"underlying": "BAD", "option_type": "CALL",
              "strike": 100.0, "spot": 0.0, "vol": 0.20,
@@ -198,13 +198,13 @@ class TestVarMonteCarlo:
         assert var > 0
 
     def test_reproducible_with_seed(self, single_call):
-        """Same seed should produce identical results."""
+        """La même graine doit produire des résultats identiques."""
         var1, _ = var_monte_carlo(single_call, n_simul=2000, seed=99)
         var2, _ = var_monte_carlo(single_call, n_simul=2000, seed=99)
         assert var1 == var2
 
     def test_different_seeds_different_results(self, single_call):
-        """Different seeds should (virtually always) give different results."""
+        """Des graines différentes doivent (quasi-toujours) donner des résultats différents."""
         var1, _ = var_monte_carlo(single_call, n_simul=500, seed=1)
         var2, _ = var_monte_carlo(single_call, n_simul=500, seed=2)
         assert var1 != var2
@@ -216,35 +216,34 @@ class TestVarMonteCarlo:
 
     def test_pnl_list_is_sorted_ascending(self, single_call):
         _, pnl = var_monte_carlo(single_call, n_simul=200, seed=42)
-        assert pnl == sorted(pnl), "P&L list must be sorted ascending"
+        assert pnl == sorted(pnl), "La liste P&L doit être triée par ordre croissant"
 
     def test_var_is_positive_loss(self, single_call):
-        """VaR is reported as a positive number (absolute loss)."""
+        """La VaR est exprimée comme un nombre positif (perte absolue)."""
         var, pnl = var_monte_carlo(single_call, n_simul=1000, seed=42)
-        assert var >= 0, "VaR must be reported as a positive number"
+        assert var >= 0, "La VaR doit être un nombre positif"
 
     def test_converges_toward_parametric(self, single_call):
         """
-        With large N and for a delta-dominated position,
-        MC VaR should be in the same order of magnitude as parametric VaR.
+        Avec un N élevé, pour une position dominée par Delta,
+        la VaR MC doit être du même ordre de grandeur que la VaR paramétrique.
         """
         var_param = var_parametrique(single_call)
         var_mc, _ = var_monte_carlo(single_call, n_simul=50_000, seed=42)
         ratio = var_mc / var_param
         assert 0.5 < ratio < 2.0, \
-            f"MC VaR ({var_mc:.0f}) diverges too far from Parametric ({var_param:.0f})"
+            f"VaR MC ({var_mc:.0f}) diverge trop de la Paramétrique ({var_param:.0f})"
 
     def test_more_simulations_reduces_variance(self, single_call):
         """
-        Running MC twice with the same seed should be identical;
-        different seeds show that more simulations stabilize the estimate.
-        (Weak test: just check the spread is finite.)
+        Vérification faible : l'écart entre plusieurs tirages avec graines différentes
+        doit rester borné.
         """
         vars_ = [var_monte_carlo(single_call, n_simul=200, seed=s)[0]
                  for s in range(10)]
         spread = max(vars_) - min(vars_)
         assert spread < var_parametrique(single_call) * 2, \
-            "MC VaR spread across seeds should be bounded"
+            "L'écart VaR MC entre graines doit rester borné"
 
 
 # ================================================================
@@ -259,43 +258,42 @@ class TestVarHistorique:
 
     def test_scenario_count(self, single_call):
         _, results = var_historique(single_call)
-        assert len(results) == 25, "Historical scenario set should have 25 entries"
+        assert len(results) == 25, "Le jeu de scénarios historiques doit contenir 25 entrées"
 
     def test_results_sorted_by_pnl(self, single_call):
         _, results = var_historique(single_call)
         pnls = [r[1] for r in results]
-        assert pnls == sorted(pnls), "Results must be sorted by P&L ascending"
+        assert pnls == sorted(pnls), "Les résultats doivent être triés par P&L croissant"
 
     def test_covid_scenario_is_worst_for_long_call(self, single_call):
         """
-        For a long CALL (delta > 0), the worst shock (-12% COVID)
-        should produce the most negative P&L.
+        Pour un CALL long (delta > 0), le pire choc (-12% COVID)
+        doit produire le P&L le plus négatif.
         """
         _, results = var_historique(single_call)
-        worst_pnl   = results[0][1]   # most negative after sort
-        worst_shock = results[0][0]   # corresponding shock (%)
+        worst_pnl   = results[0][1]   # plus négatif après tri
+        worst_shock = results[0][0]   # choc correspondant (%)
         assert worst_shock == pytest.approx(-12.0, rel=0.01), \
-            f"Expected worst shock = -12% (COVID), got {worst_shock:.1f}%"
+            f"Pire choc attendu = -12% (COVID), obtenu {worst_shock:.1f}%"
         assert worst_pnl < 0
 
     def test_delta_neutral_var_near_zero(self, zero_delta_position):
         """
-        A delta-neutral, long-gamma position profits from large moves (dS^2 > 0).
-        Historical VaR can be negative — meaning the position is expected to GAIN
-        on crisis scenarios (long convexity). This is financially correct.
-        We simply verify the result is a finite number small relative to notional.
+        Une position delta-neutre, longue en Gamma, bénéficie des grands mouvements (dS^2 > 0).
+        La VaR historique peut être négative — la position GAGNE sur les crises (long convexité).
+        C'est financièrement correct. On vérifie simplement que le résultat est fini et borné.
         """
         var, _ = var_historique(zero_delta_position)
-        assert math.isfinite(var), "VaR must be a finite number"
-        # Absolute value should be well below notional
+        assert math.isfinite(var), "La VaR doit être un nombre fini"
+        # La valeur absolue doit rester bien en dessous du notional
         assert abs(var) < zero_delta_position[0]["notional"] * 0.05, \
-            "Delta-neutral VaR (abs) should be < 5% of notional"
+            "La VaR delta-neutre (abs) doit être < 5% du notional"
 
     def test_shock_range_includes_positive_scenarios(self, single_call):
-        """At least some scenarios should produce a positive P&L."""
+        """Au moins certains scénarios doivent produire un P&L positif."""
         _, results = var_historique(single_call)
         positive = [r for r in results if r[1] > 0]
-        assert len(positive) > 0, "At least one scenario should be a gain"
+        assert len(positive) > 0, "Au moins un scénario doit être gagnant"
 
     def test_mixed_book(self, mixed_book):
         var, _ = var_historique(mixed_book)
@@ -303,7 +301,7 @@ class TestVarHistorique:
 
 
 # ================================================================
-# Integration test — full pipeline
+# Test d'intégration — pipeline complet
 # ================================================================
 
 class TestFullPipeline:
@@ -318,7 +316,7 @@ class TestFullPipeline:
         assert var_h  > 0
 
     def test_csv_to_var_pipeline(self, sample_csv_path):
-        """End-to-end: load CSV → run all 3 VaR methods → check results."""
+        """Bout en bout : charger CSV → lancer les 3 méthodes VaR → vérifier les résultats."""
         positions = load_positions(sample_csv_path)
         assert len(positions) == 10
 
@@ -335,13 +333,13 @@ class TestFullPipeline:
 
     def test_parametric_less_than_mc_for_long_book(self, mixed_book):
         """
-        For a long book (net positive delta), parametric VaR (linear)
-        is typically less than MC VaR (non-linear with Gamma).
-        This is not always true but holds for typical long-call portfolios.
+        Pour un portefeuille long (delta net positif), la VaR paramétrique (linéaire)
+        est généralement inférieure à la VaR MC (non-linéaire avec Gamma).
+        Ce n'est pas toujours vrai, mais vaut pour les portefeuilles calls typiques.
         """
         var_p        = var_parametrique(mixed_book)
         var_mc, _    = var_monte_carlo(mixed_book, n_simul=10_000, seed=42)
-        # Allow ±50% tolerance — just check they're in the same ballpark
+        # Tolérance ±50% — on vérifie simplement qu'ils sont du même ordre
         ratio = var_mc / var_p
         assert 0.5 < ratio < 3.0, \
-            f"Parametric ({var_p:.0f}) and MC ({var_mc:.0f}) should be in same range"
+            f"Paramétrique ({var_p:.0f}) et MC ({var_mc:.0f}) doivent être du même ordre"

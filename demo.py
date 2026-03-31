@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # ================================================================
-# demo.py - CommandoQuant Standalone Demo
+# demo.py - Démo autonome CommandoQuant
 # ================================================================
-# Runs the full VaR pipeline WITHOUT SQL Server.
-# Uses sample positions from data/sample_positions.csv.
+# Lance le pipeline VaR complet SANS SQL Server.
+# Utilise les positions exemples depuis data/sample_positions.csv.
 #
-# Usage:
+# Utilisation :
 #   python demo.py
-#   python demo.py --output results/my_var_report.xlsx
+#   python demo.py --output results/mon_rapport_var.xlsx
 #
-# Requirements: pip install openpyxl
-# Optional:     pip install pandas  (for richer CSV loading)
+# Prérequis : pip install openpyxl
+# Optionnel  : pip install pandas  (pour un chargement CSV enrichi)
 # ================================================================
 
 import csv
@@ -29,22 +29,22 @@ DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), "var_results_demo.xlsx"
 
 CONFIDENCE = 0.95
 N_SIMUL    = 10000
-VOL_DAILY  = 0.015    # ~25% annualized / sqrt(252)
+VOL_DAILY  = 0.015    # ~25% annualisée / sqrt(252)
 
 
 # ----------------------------------------------------------------
-# 1. Load positions from CSV (no SQL Server needed)
+# 1. Chargement des positions depuis CSV (sans SQL Server)
 # ----------------------------------------------------------------
 def load_positions(csv_path: str) -> list:
     """
-    Loads option positions from a CSV file.
+    Charge les positions d'options depuis un fichier CSV.
 
-    Expected columns:
+    Colonnes attendues :
       underlying, option_type, strike, spot, vol, prix,
       delta, gamma, vega, notional
 
-    Returns a list of dicts — same structure as lire_positions()
-    in var_engine.py (SQL mode).
+    Retourne une liste de dictionnaires — même structure que lire_positions()
+    dans var_engine.py (mode SQL).
     """
     positions = []
     with open(csv_path, newline="", encoding="utf-8") as f:
@@ -63,21 +63,21 @@ def load_positions(csv_path: str) -> list:
                 "notional":    float(row["notional"]),
             })
 
-    print(f"[OK] {len(positions)} positions loaded from {csv_path}")
+    print(f"[OK] {len(positions)} positions chargees depuis {csv_path}")
     return positions
 
 
 # ----------------------------------------------------------------
-# 2. VaR Parametric (Delta method)
+# 2. VaR Paramétrique (méthode Delta)
 # ----------------------------------------------------------------
 def var_parametrique(positions: list, confidence: float = 0.95) -> float:
     """
-    Parametric VaR — 1st order Taylor approximation via Delta.
+    VaR Paramétrique — approximation de Taylor au 1er ordre via Delta.
 
-    Formula:  VaR = z * sqrt( sum( (Delta * nb * sigma_spot)^2 ) )
+    Formule :  VaR = z * sqrt( sum( (Delta * nb * sigma_spot)^2 ) )
     z(95%)  = 1.6449
 
-    Fast but ignores convexity (Gamma).
+    Rapide mais ignore la convexité (Gamma).
     """
     z = 1.6449
     variance = 0.0
@@ -85,13 +85,16 @@ def var_parametrique(positions: list, confidence: float = 0.95) -> float:
     for p in positions:
         if p["spot"] <= 0:
             continue
+        # Nombre d'actions équivalent = Notional / Spot
         nb         = p["notional"] / p["spot"]
+        # Variation du spot en euros (1 sigma journalier)
         sigma_spot = p["spot"] * VOL_DAILY
+        # Contribution via Delta
         contrib    = p["delta"] * nb * sigma_spot
         variance  += contrib ** 2
 
     var = z * math.sqrt(variance)
-    print(f"  [Parametric VaR 95%]   {var:>12,.2f} EUR")
+    print(f"  [VaR Parametrique 95%]   {var:>12,.2f} EUR")
     return var
 
 
@@ -101,13 +104,13 @@ def var_parametrique(positions: list, confidence: float = 0.95) -> float:
 def var_monte_carlo(positions: list, n_simul: int = 10000,
                     confidence: float = 0.95, seed: int = None):
     """
-    Monte Carlo VaR — N random market scenarios.
+    VaR Monte Carlo — N scénarios de marché aléatoires.
 
     dP_i = Delta * dS_i + 0.5 * Gamma * dS_i^2
-    dS_i = spot * vol_daily * epsilon_i  (epsilon ~ N(0,1))
+    dS_i = spot * vol_journaliere * epsilon_i  (epsilon ~ N(0,1))
 
-    More accurate than parametric: captures convexity via Gamma.
-    Returns (var, pnl_list).
+    Plus précis que la méthode paramétrique : capture la convexité via Gamma.
+    Retourne (var, liste_pnl).
     """
     if seed is not None:
         random.seed(seed)
@@ -121,45 +124,49 @@ def var_monte_carlo(positions: list, n_simul: int = 10000,
                 continue
             nb = p["notional"] / p["spot"]
 
-            # Box-Muller transform → N(0,1)
+            # Transformation Box-Muller → N(0,1)
             u1 = random.random() or 1e-10
             u2 = random.random()
             eps = math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
 
+            # Variation du spot
             dS  = p["spot"] * VOL_DAILY * eps
+            # P&L via Taylor ordre 2 (Delta + Gamma)
             dP  = (p["delta"] * dS + 0.5 * p["gamma"] * dS ** 2) * nb
             pnl += dP
 
         pnl_list.append(pnl)
 
+    # Trier du plus mauvais au meilleur
     pnl_list.sort()
+    # Quantile à 5% = VaR 95%
     idx = int((1.0 - confidence) * n_simul)
     var = -pnl_list[idx]
 
-    print(f"  [Monte Carlo VaR 95%]  {var:>12,.2f} EUR  ({n_simul:,} simulations)")
+    print(f"  [VaR Monte Carlo  95%]  {var:>12,.2f} EUR  ({n_simul:,} simulations)")
     return var, pnl_list
 
 
 # ----------------------------------------------------------------
-# 4. VaR Historical (real crisis shocks)
+# 4. VaR Historique (chocs de crises réelles)
 # ----------------------------------------------------------------
 def var_historique(positions: list, confidence: float = 0.95):
     """
-    Historical VaR — replay real market crisis shocks.
+    VaR Historique — rejoue des chocs de marché historiques réels.
 
-    Scenario set includes: COVID-19, Lehman Brothers, Flash Crash,
-    European debt crisis, Brexit, Ukraine war, SVB collapse.
+    Scénarios : COVID-19, Lehman Brothers, Flash Crash,
+    crise dettes européennes, Brexit, guerre Ukraine, crise SVB.
 
-    Returns (var, [(shock_pct, pnl), ...]).
+    Retourne (var, [(choc_pct, pnl, label), ...]).
     """
     shocks = [
-        (-0.120, "COVID-19 March 2020"),
-        (-0.095, "Lehman Brothers Sept 2008"),
-        (-0.072, "Flash Crash May 2010"),
-        (-0.068, "EU Sovereign Debt 2011"),
-        (-0.055, "Brexit June 2016"),
-        (-0.048, "Russia-Ukraine Feb 2022"),
-        (-0.042, "SVB Collapse March 2023"),
+        (-0.120, "COVID-19 mars 2020"),
+        (-0.095, "Lehman Brothers sept. 2008"),
+        (-0.072, "Flash Crash mai 2010"),
+        (-0.068, "Crise dettes souveraines EU 2011"),
+        (-0.055, "Brexit juin 2016"),
+        (-0.048, "Russie-Ukraine fev. 2022"),
+        (-0.042, "Crise SVB mars 2023"),
         (-0.035, "Stress -3.5%"),
         (-0.028, "Stress -2.8%"),
         (-0.022, "Stress -2.2%"),
@@ -169,15 +176,15 @@ def var_historique(positions: list, confidence: float = 0.95):
         (-0.010, "Normal -1.0%"),
         (-0.008, "Normal -0.8%"),
         (-0.006, "Normal -0.6%"),
-        ( 0.005, "Recovery +0.5%"),
-        ( 0.010, "Recovery +1.0%"),
-        ( 0.015, "Recovery +1.5%"),
-        ( 0.020, "Rebound +2.0%"),
-        ( 0.030, "Rebound +3.0%"),
+        ( 0.005, "Rebond +0.5%"),
+        ( 0.010, "Rebond +1.0%"),
+        ( 0.015, "Rebond +1.5%"),
+        ( 0.020, "Hausse +2.0%"),
+        ( 0.030, "Hausse +3.0%"),
         ( 0.045, "Bull Run +4.5%"),
         ( 0.060, "Bull Run +6.0%"),
-        ( 0.075, "Strong Rally +7.5%"),
-        ( 0.085, "Post-COVID Rebound"),
+        ( 0.075, "Fort rallye +7.5%"),
+        ( 0.085, "Rebond post-COVID"),
     ]
 
     results = []
@@ -192,34 +199,35 @@ def var_historique(positions: list, confidence: float = 0.95):
             pnl += dP
         results.append((choc * 100, pnl, label))
 
+    # Trier par P&L croissant (pire en premier)
     results.sort(key=lambda x: x[1])
     idx = int((1.0 - confidence) * len(results))
     var = -results[idx][1]
 
-    print(f"  [Historical VaR 95%]   {var:>12,.2f} EUR  ({len(shocks)} scenarios)")
+    print(f"  [VaR Historique   95%]   {var:>12,.2f} EUR  ({len(shocks)} scenarios)")
     return var, results
 
 
 # ----------------------------------------------------------------
-# 5. Export to Excel (styled report)
+# 5. Export Excel (rapport stylisé)
 # ----------------------------------------------------------------
 def export_excel(positions, var_param, var_mc, pnl_mc,
                  var_histo, pnl_histo, output_path: str):
     """
-    Generates a styled Excel report with 3 sheets:
-      - VaR Summary   : comparison of 3 methods + position breakdown
-      - Monte Carlo   : first 200 simulated P&L scenarios
-      - Historical    : all crisis stress test results
+    Génère un rapport Excel stylisé avec 3 feuilles :
+      - VaR Summary   : comparaison des 3 méthodes + détail des positions
+      - Monte Carlo   : 200 premiers P&L simulés
+      - Historique    : tous les résultats des stress tests de crise
     """
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment
     except ImportError:
-        print("[WARN] openpyxl not installed. Skipping Excel export.")
-        print("       Run: pip install openpyxl")
+        print("[ATTENTION] openpyxl non installe. Export Excel ignore.")
+        print("            Installer avec : pip install openpyxl")
         return
 
-    # CommandoQuant color palette
+    # Palette de couleurs CommandoQuant
     DARK  = "0B1426"
     AMBER = "D4880A"
     GOLD  = "F0B429"
@@ -241,35 +249,35 @@ def export_excel(positions, var_param, var_mc, pnl_mc,
 
     wb = Workbook()
 
-    # ---- Sheet 1: VaR Summary ----
+    # ---- Feuille 1 : Résumé VaR ----
     ws = wb.active
     ws.title = "VaR Summary"
     ws.row_dimensions[1].height = 36
 
     ws.merge_cells("A1:F1")
     title(ws["A1"])
-    ws["A1"] = "CommandoQuant  —  Value-at-Risk Report  (Demo Mode)"
+    ws["A1"] = "CommandoQuant  —  Rapport Value-at-Risk  (Mode Demo)"
 
     ws.merge_cells("A2:F2")
     ws["A2"] = (
-        f"Portfolio: {len(positions)} positions  |  "
-        f"Confidence: {int(CONFIDENCE*100)}%  |  Horizon: 1 day  |  "
-        f"Vol: {VOL_DAILY*100:.2f}%/day"
+        f"Portefeuille : {len(positions)} positions  |  "
+        f"Confiance : {int(CONFIDENCE*100)}%  |  Horizon : 1 jour  |  "
+        f"Vol : {VOL_DAILY*100:.2f}%/jour"
     )
     ws["A2"].font      = Font(italic=True, color="B0BEC5", size=9)
     ws["A2"].fill      = PatternFill("solid", fgColor=DARK)
     ws["A2"].alignment = Alignment(horizontal="center")
 
-    for col, h in enumerate(["Method", "VaR 95% (EUR)", "Description", "Reliability"], 1):
+    for col, h in enumerate(["Methode", "VaR 95% (EUR)", "Description", "Fiabilite"], 1):
         hdr(ws.cell(4, col, h))
 
     rows_var = [
-        ("Parametric (Delta)",       round(var_param, 2),
-         "Analytical formula — Delta sensitivity only",   "Fast / ignores Gamma"),
-        ("Monte Carlo (10,000 sim)", round(var_mc,    2),
-         f"10,000 random market scenarios (Delta+Gamma)", "Accurate / heavier"),
-        ("Historical (crisis shocks)",round(var_histo, 2),
-         "COVID, Lehman, Flash Crash, Brexit, Ukraine…",  "Realistic / known crises only"),
+        ("Parametrique (Delta)",        round(var_param, 2),
+         "Formule analytique — sensibilite Delta uniquement",  "Rapide / ignore Gamma"),
+        ("Monte Carlo (10 000 simul.)", round(var_mc,    2),
+         f"10 000 scenarios de marche aleatoires (Delta+Gamma)", "Precis / plus lourd"),
+        ("Historique (crises reelles)", round(var_histo, 2),
+         "COVID, Lehman, Flash Crash, Brexit, Ukraine…",       "Realiste / crises connues"),
     ]
 
     for i, (method, val, desc, rel) in enumerate(rows_var):
@@ -287,10 +295,10 @@ def export_excel(positions, var_param, var_mc, pnl_mc,
 
     ws.merge_cells("A9:F9")
     hdr(ws["A9"], bg=AMBER, fg=DARK)
-    ws["A9"] = "PORTFOLIO POSITIONS"
+    ws["A9"] = "POSITIONS DU PORTEFEUILLE"
 
     for col, h in enumerate(
-        ["Underlying", "Type", "Strike", "Spot", "Delta", "VaR Contribution (EUR)"], 1
+        ["Sous-jacent", "Type", "Strike", "Spot", "Delta", "Contribution VaR (EUR)"], 1
     ):
         hdr(ws.cell(10, col, h))
 
@@ -316,11 +324,11 @@ def export_excel(positions, var_param, var_mc, pnl_mc,
     ws.column_dimensions["E"].width = 10
     ws.column_dimensions["F"].width = 22
 
-    # ---- Sheet 2: Monte Carlo distribution ----
+    # ---- Feuille 2 : Distribution Monte Carlo ----
     ws2 = wb.create_sheet("Monte Carlo")
     ws2.merge_cells("A1:B1")
     title(ws2["A1"])
-    ws2["A1"] = "P&L Distribution — Monte Carlo (first 200)"
+    ws2["A1"] = "Distribution P&L — Monte Carlo (200 premiers scenarios)"
     for col, h in enumerate(["Scenario #", "P&L (EUR)"], 1):
         hdr(ws2.cell(3, col, h))
     for i, pnl in enumerate(pnl_mc[:200]):
@@ -335,12 +343,12 @@ def export_excel(positions, var_param, var_mc, pnl_mc,
     ws2.column_dimensions["A"].width = 14
     ws2.column_dimensions["B"].width = 16
 
-    # ---- Sheet 3: Historical stress ----
-    ws3 = wb.create_sheet("Historical")
+    # ---- Feuille 3 : Stress tests historiques ----
+    ws3 = wb.create_sheet("Historique")
     ws3.merge_cells("A1:C1")
     title(ws3["A1"])
-    ws3["A1"] = "Historical Stress Tests — Real Crisis Scenarios"
-    for col, h in enumerate(["Spot Shock (%)", "Portfolio P&L (EUR)", "Event"], 1):
+    ws3["A1"] = "Stress Tests Historiques — Scenarios de Crises Reelles"
+    for col, h in enumerate(["Choc Spot (%)", "P&L Portefeuille (EUR)", "Evenement"], 1):
         hdr(ws3.cell(3, col, h))
     for i, (choc, pnl, label) in enumerate(pnl_histo):
         r = 4 + i
@@ -358,70 +366,70 @@ def export_excel(positions, var_param, var_mc, pnl_mc,
     ws3.column_dimensions["C"].width = 30
 
     wb.save(output_path)
-    print(f"\n[OK] Report saved: {output_path}")
+    print(f"\n[OK] Rapport genere : {output_path}")
 
 
 # ----------------------------------------------------------------
-# Main entry point
+# Point d'entrée principal
 # ----------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="CommandoQuant — Standalone VaR Demo (no SQL Server required)"
+        description="CommandoQuant — Demo VaR autonome (sans SQL Server)"
     )
     parser.add_argument(
         "--input", default=DEFAULT_INPUT,
-        help=f"CSV file with positions (default: {DEFAULT_INPUT})"
+        help=f"Fichier CSV des positions (defaut : {DEFAULT_INPUT})"
     )
     parser.add_argument(
         "--output", default=DEFAULT_OUTPUT,
-        help=f"Output Excel report path (default: {DEFAULT_OUTPUT})"
+        help=f"Chemin du rapport Excel de sortie (defaut : {DEFAULT_OUTPUT})"
     )
     parser.add_argument(
         "--simulations", type=int, default=N_SIMUL,
-        help=f"Number of Monte Carlo simulations (default: {N_SIMUL})"
+        help=f"Nombre de simulations Monte Carlo (defaut : {N_SIMUL})"
     )
     parser.add_argument(
         "--seed", type=int, default=42,
-        help="Random seed for Monte Carlo reproducibility (default: 42)"
+        help="Graine aleatoire pour la reproductibilite Monte Carlo (defaut : 42)"
     )
     args = parser.parse_args()
 
     print("=" * 60)
-    print("  CommandoQuant — VaR Engine  (Demo / Standalone Mode)")
+    print("  CommandoQuant — Moteur VaR  (Mode Demo / Autonome)")
     print("=" * 60)
 
     if not os.path.exists(args.input):
-        print(f"[ERROR] Input file not found: {args.input}")
+        print(f"[ERREUR] Fichier d'entree introuvable : {args.input}")
         sys.exit(1)
 
     positions = load_positions(args.input)
 
     if not positions:
-        print("[ERROR] No valid positions found in CSV.")
+        print("[ERREUR] Aucune position valide trouvee dans le CSV.")
         sys.exit(1)
 
-    print(f"\nPositions loaded ({len(positions)}):")
+    print(f"\nPositions chargees ({len(positions)}) :")
     for p in positions:
         print(f"  {p['underlying']:<8} {p['option_type']:<5} "
               f"K={p['strike']:>7.2f}  S={p['spot']:>7.2f}  "
               f"Delta={p['delta']:>+.4f}")
 
-    print("\n--- VaR Calculation ---")
+    print("\n--- Calcul VaR ---")
     var_p              = var_parametrique(positions)
     var_mc, pnl_mc     = var_monte_carlo(positions, args.simulations, seed=args.seed)
     var_h, pnl_h       = var_historique(positions)
 
-    print("\n--- Exporting Report ---")
+    print("\n--- Export du rapport ---")
     export_excel(positions, var_p, var_mc, pnl_mc, var_h, pnl_h, args.output)
 
     print("\n" + "=" * 60)
-    print("  RESULTS SUMMARY")
+    print("  RESUME DES RESULTATS")
     print("=" * 60)
-    print(f"  Parametric VaR  95% : {var_p:>12,.2f} EUR")
-    print(f"  Monte Carlo VaR 95% : {var_mc:>12,.2f} EUR")
-    print(f"  Historical VaR  95% : {var_h:>12,.2f} EUR")
+    print(f"  VaR Parametrique 95% : {var_p:>12,.2f} EUR")
+    print(f"  VaR Monte Carlo  95% : {var_mc:>12,.2f} EUR")
+    print(f"  VaR Historique   95% : {var_h:>12,.2f} EUR")
     print("=" * 60)
-    print("  Done.")
+    print("  Termine.")
 
 
 if __name__ == "__main__":
